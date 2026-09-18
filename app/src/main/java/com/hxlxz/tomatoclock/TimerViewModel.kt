@@ -1,4 +1,4 @@
-package com.example.tomatoclock
+package com.hxlxz.tomatoclock
 
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +14,7 @@ class TimerViewModel @Inject constructor(
     val timeRemaining = repository.timeRemaining
     val totalTimeInSeconds = repository.totalTimeInSeconds
     val currentCycle = repository.currentCycle
+    val totalCycles = repository.totalCycles
 
     fun startTimer() = repository.startTimer()
     fun pauseTimer() = repository.pauseTimer()

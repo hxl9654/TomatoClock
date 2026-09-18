@@ -1,4 +1,4 @@
-package com.example.tomatoclock
+package com.hxlxz.tomatoclock
 
 import android.content.Intent
 import android.os.Bundle
@@ -11,9 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.tomatoclock.ui.SettingsScreen
-import com.example.tomatoclock.ui.TimerScreen
-import com.example.tomatoclock.ui.theme.TomatoClockTheme
+import com.hxlxz.tomatoclock.ui.SettingsScreen
+import com.hxlxz.tomatoclock.ui.TimerScreen
+import com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import android.Manifest
@@ -24,8 +24,7 @@ import android.widget.Toast
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject
-    lateinit var dataStore: SettingsDataStore
+
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -58,7 +57,6 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("settings") {
                             SettingsScreen(
-                                dataStore = dataStore,
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }

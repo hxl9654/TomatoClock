@@ -1,4 +1,4 @@
-package com.example.tomatoclock
+﻿package com.hxlxz.tomatoclock
 
 enum class TimerMode {
     FOCUS,

@@ -1,4 +1,4 @@
-package com.example.tomatoclock.ui
+package com.hxlxz.tomatoclock.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,27 +13,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.example.tomatoclock.R
-import com.example.tomatoclock.SettingsDataStore
-import kotlinx.coroutines.launch
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hxlxz.tomatoclock.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    dataStore: SettingsDataStore,
+    viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
 
-    val focusTime by dataStore.focusTimeFlow.collectAsState(initial = 25)
-    val shortBreakTime by dataStore.shortBreakTimeFlow.collectAsState(initial = 5)
-    val longBreakTime by dataStore.longBreakTimeFlow.collectAsState(initial = 15)
-    val cycles by dataStore.cyclesFlow.collectAsState(initial = 4)
-    val snoozeTime by dataStore.snoozeTimeFlow.collectAsState(initial = 5)
+    val focusTime by viewModel.focusTimeFlow.collectAsStateWithLifecycle(initialValue = 25)
+    val shortBreakTime by viewModel.shortBreakTimeFlow.collectAsStateWithLifecycle(initialValue = 5)
+    val longBreakTime by viewModel.longBreakTimeFlow.collectAsStateWithLifecycle(initialValue = 15)
+    val cycles by viewModel.cyclesFlow.collectAsStateWithLifecycle(initialValue = 4)
+    val snoozeTime by viewModel.snoozeTimeFlow.collectAsStateWithLifecycle(initialValue = 5)
     
-    val autoStartBreak by dataStore.autoStartBreakFlow.collectAsState(initial = false)
-    val autoStartFocus by dataStore.autoStartFocusFlow.collectAsState(initial = false)
-    val wakeScreen by dataStore.wakeScreenFlow.collectAsState(initial = true)
+    val autoStartBreak by viewModel.autoStartBreakFlow.collectAsStateWithLifecycle(initialValue = false)
+    val autoStartFocus by viewModel.autoStartFocusFlow.collectAsStateWithLifecycle(initialValue = false)
+    val wakeScreen by viewModel.wakeScreenFlow.collectAsStateWithLifecycle(initialValue = true)
 
     Scaffold(
         topBar = {
@@ -65,45 +64,35 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_focus_time),
                 value = focusTime,
                 valueRange = 1..120,
-                onValueChange = { 
-                    coroutineScope.launch { dataStore.saveFocusTime(it) }
-                }
+                onValueChange = { viewModel.saveFocusTime(it) }
             )
 
             NumberInputSetting(
                 label = stringResource(R.string.settings_short_break),
                 value = shortBreakTime,
                 valueRange = 1..30,
-                onValueChange = { 
-                    coroutineScope.launch { dataStore.saveShortBreakTime(it) }
-                }
+                onValueChange = { viewModel.saveShortBreakTime(it) }
             )
 
             NumberInputSetting(
                 label = stringResource(R.string.settings_long_break),
                 value = longBreakTime,
                 valueRange = 5..60,
-                onValueChange = { 
-                    coroutineScope.launch { dataStore.saveLongBreakTime(it) }
-                }
+                onValueChange = { viewModel.saveLongBreakTime(it) }
             )
 
             NumberInputSetting(
                 label = stringResource(R.string.settings_cycles),
                 value = cycles,
                 valueRange = 1..10,
-                onValueChange = { 
-                    coroutineScope.launch { dataStore.saveCycles(it) }
-                }
+                onValueChange = { viewModel.saveCycles(it) }
             )
 
             NumberInputSetting(
                 label = stringResource(R.string.settings_snooze_time),
                 value = snoozeTime,
                 valueRange = 1..30,
-                onValueChange = { 
-                    coroutineScope.launch { dataStore.saveSnoozeTime(it) }
-                }
+                onValueChange = { viewModel.saveSnoozeTime(it) }
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -117,25 +106,19 @@ fun SettingsScreen(
             SwitchSetting(
                 label = stringResource(R.string.settings_auto_break),
                 checked = autoStartBreak,
-                onCheckedChange = { 
-                    coroutineScope.launch { dataStore.saveAutoStartBreak(it) }
-                }
+                onCheckedChange = { viewModel.saveAutoStartBreak(it) }
             )
 
             SwitchSetting(
                 label = stringResource(R.string.settings_auto_focus),
                 checked = autoStartFocus,
-                onCheckedChange = { 
-                    coroutineScope.launch { dataStore.saveAutoStartFocus(it) }
-                }
+                onCheckedChange = { viewModel.saveAutoStartFocus(it) }
             )
 
             SwitchSetting(
                 label = stringResource(R.string.settings_wake_screen),
                 checked = wakeScreen,
-                onCheckedChange = { 
-                    coroutineScope.launch { dataStore.saveWakeScreen(it) }
-                }
+                onCheckedChange = { viewModel.saveWakeScreen(it) }
             )
         }
     }

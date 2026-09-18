@@ -9,20 +9,24 @@ plugins {
 }
 
 configure<ApplicationExtension> {
-    namespace = "com.example.tomatoclock"
+    namespace = "com.hxlxz.tomatoclock"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.example.tomatoclock"
+        applicationId = "com.hxlxz.tomatoclock"
         minSdk = 34
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.hxlxz.tomatoclock.CustomTestRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+    }
+
+    installation {
+        installOptions.add("-g")
     }
 
     buildTypes {
@@ -40,6 +44,9 @@ configure<ApplicationExtension> {
     }
     buildFeatures {
         compose = true
+    }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
     }
     packaging {
         resources {
@@ -76,10 +83,35 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("io.mockk:mockk:1.14.11")
     testImplementation("app.cash.turbine:turbine:1.2.1")
+    
+    // Local Unit Tests (Robolectric & Compose)
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Instrumented Tests
+    androidTestImplementation("junit:junit:4.13.2")
+    androidTestImplementation("io.mockk:mockk-android:1.14.11")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("androidx.test:rules:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    
+    // Hilt Testing
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.60.1")
+    kspAndroidTest("com.google.dagger:hilt-android-compiler:2.60.1")
 }
 
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
     }
+    jvmToolchain(17)
 }

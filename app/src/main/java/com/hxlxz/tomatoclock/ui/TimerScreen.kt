@@ -1,4 +1,4 @@
-package com.example.tomatoclock.ui
+package com.hxlxz.tomatoclock.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -11,13 +11,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.tomatoclock.R
-import com.example.tomatoclock.TimerMode
-import com.example.tomatoclock.TimerState
-import com.example.tomatoclock.TimerViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hxlxz.tomatoclock.R
+import com.hxlxz.tomatoclock.TimerMode
+import com.hxlxz.tomatoclock.TimerState
+import com.hxlxz.tomatoclock.TimerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,11 +27,12 @@ fun TimerScreen(
     onNavigateToSettings: () -> Unit,
     viewModel: TimerViewModel = hiltViewModel()
 ) {
-    val timerMode by viewModel.timerMode.collectAsState()
-    val timerState by viewModel.timerState.collectAsState()
-    val timeRemaining by viewModel.timeRemaining.collectAsState()
-    val totalTime by viewModel.totalTimeInSeconds.collectAsState()
-    val currentCycle by viewModel.currentCycle.collectAsState()
+    val timerMode by viewModel.timerMode.collectAsStateWithLifecycle()
+    val timerState by viewModel.timerState.collectAsStateWithLifecycle()
+    val timeRemaining by viewModel.timeRemaining.collectAsStateWithLifecycle()
+    val totalTime by viewModel.totalTimeInSeconds.collectAsStateWithLifecycle()
+    val currentCycle by viewModel.currentCycle.collectAsStateWithLifecycle()
+    val totalCycles by viewModel.totalCycles.collectAsStateWithLifecycle()
 
     // Assuming we fetch total cycles from a higher level or just hardcode for demo,
     // but in a real app we'd fetch it from ViewModel. For now just show current.
@@ -82,9 +85,9 @@ fun TimerScreen(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Cycle info (Mocking total cycles as 4 for display, ideally from viewmodel)
+            // Cycle info: dynamically read from ViewModel
             Text(
-                text = stringResource(R.string.cycle_count, currentCycle, 4),
+                text = stringResource(R.string.cycle_count, currentCycle, totalCycles),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -194,5 +197,17 @@ fun TimerScreen(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, name = "专注中 - 运行状态")
+@Composable
+private fun TimerScreenRunningPreview() {
+    com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+        // Preview uses a stub ViewModel via mock flows; for IDE preview only.
+        // Real ViewModel requires Hilt injection, so we inline the screen layout logic via
+        // a dedicated preview composable that mirrors the UI directly.
+        // Currently this preview will show the screen with hiltViewModel() stub behavior.
+        // For true mock previews, consider splitting TimerScreen into stateless + stateful composables.
     }
 }

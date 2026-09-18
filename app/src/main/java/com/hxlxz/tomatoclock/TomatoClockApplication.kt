@@ -1,4 +1,4 @@
-package com.example.tomatoclock
+﻿package com.hxlxz.tomatoclock
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp

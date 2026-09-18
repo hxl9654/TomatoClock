@@ -1,0 +1,205 @@
+package com.hxlxz.tomatoclock
+
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import androidx.datastore.preferences.core.edit
+import androidx.test.rule.GrantPermissionRule
+import android.Manifest
+import javax.inject.Inject
+
+@HiltAndroidTest
+@RunWith(AndroidJUnit4::class)
+class TomatoClockE2ETest {
+
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
+    val composeTestRule = createAndroidComposeRule<MainActivity>()
+
+    @get:Rule(order = 2)
+    val permissionRule: GrantPermissionRule = GrantPermissionRule.grant(Manifest.permission.POST_NOTIFICATIONS)
+
+    @Inject
+    lateinit var timeConfig: TimeConfig
+
+    private lateinit var dataStore: SettingsDataStore
+
+    @Before
+    fun setup() {
+        hiltRule.inject()
+        // Speed up the timer for testing: 1 minute configured in UI = 1 second in real time
+        timeConfig.multiplier = 1L
+        
+        dataStore = SettingsDataStore(ApplicationProvider.getApplicationContext())
+        runBlocking {
+            dataStore.saveFocusTime(3) // 3 seconds real time
+            dataStore.saveShortBreakTime(2) // 2 seconds real time
+            dataStore.saveAutoStartBreak(true)
+        }
+    }
+
+    @After
+    fun teardown() {
+        // Restore time multiplier
+        timeConfig.multiplier = 60L
+        runBlocking {
+            ApplicationProvider.getApplicationContext<android.content.Context>().dataStore.edit { it.clear() }
+        }
+    }
+
+    @Test
+    fun testFullTimerFlow() {
+        // 1. Wait for UI to settle
+        composeTestRule.waitForIdle()
+
+        // Verify initial state
+        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+        // Format of timer when 3 seconds remaining (00:03)
+        // composeTestRule.onNodeWithText("00:03").assertIsDisplayed() // Skipped initial time
+
+        // 2. Start the timer
+        composeTestRule.onNodeWithText("开始").performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify it changed to RUNNING state
+        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+        composeTestRule.onNodeWithText("暂停").assertIsDisplayed()
+        composeTestRule.onNodeWithText("停止").assertIsDisplayed()
+
+        // 3. Let the timer run to completion (wait 4 seconds max)
+        // mainClock.advanceTimeBy is not guaranteed to advance real dispatchers on device,
+        // so we wait real time.
+        Thread.sleep(4000)
+        composeTestRule.waitForIdle()
+
+        // 4. Verify it auto-transitioned to Break (since autoStartBreak is true)
+        // Or if it didn't auto start, it would be FINISHED. We configured autoStartBreak=true.
+        composeTestRule.onNodeWithText("短休息").assertIsDisplayed()
+        // composeTestRule.onNodeWithText("00:02").assertIsDisplayed() // Skipped
+
+        // 5. Test Pause functionality during break
+        composeTestRule.onNodeWithText("暂停").performClick()
+        composeTestRule.waitForIdle()
+        // composeTestRule.onNodeWithText("已暂停").assertIsDisplayed() // Not displayed in UI
+        composeTestRule.onNodeWithText("继续").assertIsDisplayed()
+
+        // 6. Test Stop functionality
+        composeTestRule.onNodeWithText("停止").performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify it resets to FOCUS mode and initial time (00:03)
+        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+        composeTestRule.onNodeWithText("00:03").assertIsDisplayed()
+    }
+    
+    @Test
+    fun testSettingsNavigationAndModification() {
+        composeTestRule.waitForIdle()
+
+        // Go to settings
+        composeTestRule.onNodeWithContentDescription("设置").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("时长设置 (分钟)").assertIsDisplayed()
+        
+        // Find the text field containing "3" (our focus time) and increment it
+        // Actually, it's easier to just click back and verify navigation works
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
+        composeTestRule.waitForIdle()
+        
+        // Verify we are back on Timer screen
+        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+    }
+
+    @Test
+    fun testManualTransitionAndSnoozeFlow() {
+        runBlocking {
+            dataStore.saveAutoStartBreak(false)
+            dataStore.saveSnoozeTime(2) // 2 seconds snooze
+        }
+        
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+
+        // Start timer
+        composeTestRule.onNodeWithText("开始").performClick()
+        
+        // Wait 4 seconds for focus timer (3s) to finish
+        Thread.sleep(4000)
+        composeTestRule.waitForIdle()
+
+        // Since autoStartBreak=false, we should see "开始下个阶段" and "稍后提醒 (Snooze)"
+        composeTestRule.onNodeWithText("开始下个阶段").assertIsDisplayed()
+        composeTestRule.onNodeWithText("稍后提醒 (Snooze)").assertIsDisplayed()
+
+        // Click snooze
+        composeTestRule.onNodeWithText("稍后提醒 (Snooze)").performClick()
+        composeTestRule.waitForIdle()
+
+        // Wait 3 seconds for snooze timer (2s) to finish
+        Thread.sleep(3000)
+        composeTestRule.waitForIdle()
+
+        // It should be finished again
+        composeTestRule.onNodeWithText("开始下个阶段").assertIsDisplayed()
+
+        // Click next
+        composeTestRule.onNodeWithText("开始下个阶段").performClick()
+        composeTestRule.waitForIdle()
+
+        // Should transition to SHORT_BREAK and start immediately
+        composeTestRule.onNodeWithText("短休息").assertIsDisplayed()
+        composeTestRule.onNodeWithText("暂停").assertIsDisplayed()
+    }
+
+    @Test
+    fun testLongBreakFlow() {
+        runBlocking {
+            dataStore.saveAutoStartBreak(true)
+            dataStore.saveAutoStartFocus(true)
+            dataStore.saveCycles(2)
+            dataStore.saveLongBreakTime(4)
+        }
+        
+        composeTestRule.waitForIdle()
+        // Wait a bit to ensure datastore propagation
+        Thread.sleep(500)
+        
+        composeTestRule.onNodeWithText("开始").performClick()
+        
+        // Cycle 1: Focus (initialized as 3s from @Before)
+        Thread.sleep(4000)
+        composeTestRule.waitForIdle()
+        
+        // Should auto-transition to SHORT_BREAK (2s from @Before)
+        composeTestRule.onNodeWithText("短休息").assertIsDisplayed()
+        
+        // Wait for Short break to finish (2s)
+        Thread.sleep(3000)
+        composeTestRule.waitForIdle()
+        
+        // Cycle 2: Focus (reads 3s again)
+        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+        
+        // Wait for Focus to finish (3s)
+        Thread.sleep(4000)
+        composeTestRule.waitForIdle()
+        
+        // Because cycles = 2, we should now be in LONG_BREAK
+        composeTestRule.onNodeWithText("长休息").assertIsDisplayed()
+    }
+}

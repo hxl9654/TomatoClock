@@ -1,4 +1,4 @@
-package com.example.tomatoclock
+package com.hxlxz.tomatoclock
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -16,9 +16,9 @@ import javax.inject.Singleton
 @Singleton
 class TimerRepository @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
-    private val dispatcher: CoroutineDispatcher
+    private val timeConfig: TimeConfig,
+    private val scope: CoroutineScope
 ) {
-    private val scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + dispatcher)
 
     private val _timerMode = MutableStateFlow(TimerMode.FOCUS)
     val timerMode: StateFlow<TimerMode> = _timerMode.asStateFlow()
@@ -35,36 +35,35 @@ class TimerRepository @Inject constructor(
     private val _currentCycle = MutableStateFlow(1)
     val currentCycle: StateFlow<Int> = _currentCycle.asStateFlow()
 
+    private val _totalCycles = MutableStateFlow(4)
+    val totalCycles: StateFlow<Int> = _totalCycles.asStateFlow()
+
     private var timerJob: Job? = null
 
     init {
         scope.launch {
             val focusTimeMin = settingsDataStore.focusTimeFlow.first()
-            val seconds = focusTimeMin * 60L
+            val seconds = focusTimeMin * timeConfig.multiplier
             _timeRemaining.value = seconds
             _totalTimeInSeconds.value = seconds
+            _totalCycles.value = settingsDataStore.cyclesFlow.first()
         }
     }
 
     fun startTimer() {
         if (_timerState.value == TimerState.RUNNING) return
-        
-        if (_timerState.value == TimerState.IDLE) {
-             scope.launch {
-                 val initialTime = getInitialTimeForMode(_timerMode.value)
-                 _timeRemaining.value = initialTime
-                 _totalTimeInSeconds.value = initialTime
-                 startCountdown()
-             }
-        } else if (_timerState.value == TimerState.PAUSED) {
+
+        if (_timerState.value == TimerState.PAUSED) {
+            // Resume from where we left off, no need to reset time
             startCountdown()
-        } else if (_timerState.value == TimerState.FINISHED) {
-             scope.launch {
-                 val initialTime = getInitialTimeForMode(_timerMode.value)
-                 _timeRemaining.value = initialTime
-                 _totalTimeInSeconds.value = initialTime
-                 startCountdown()
-             }
+        } else {
+            // IDLE or FINISHED: reset time to full duration for current mode
+            scope.launch {
+                val initialTime = getInitialTimeForMode(_timerMode.value)
+                _timeRemaining.value = initialTime
+                _totalTimeInSeconds.value = initialTime
+                startCountdown()
+            }
         }
     }
 
@@ -89,7 +88,9 @@ class TimerRepository @Inject constructor(
         timerJob?.cancel()
         _timerState.value = TimerState.IDLE
         scope.launch {
-            val initialTime = getInitialTimeForMode(_timerMode.value)
+            _timerMode.value = TimerMode.FOCUS
+            _currentCycle.value = 1
+            val initialTime = getInitialTimeForMode(TimerMode.FOCUS)
             _timeRemaining.value = initialTime
             _totalTimeInSeconds.value = initialTime
         }
@@ -104,20 +105,19 @@ class TimerRepository @Inject constructor(
         
         if (_timerMode.value == TimerMode.FOCUS && autoStartBreak) {
             nextPhase()
-            startTimer()
         } else if (_timerMode.value != TimerMode.FOCUS && autoStartFocus) {
             nextPhase()
-            startTimer()
         }
     }
 
     fun nextPhase() {
         scope.launch {
-            val totalCycles = settingsDataStore.cyclesFlow.first()
-            
+            val cycles = settingsDataStore.cyclesFlow.first()
+            _totalCycles.value = cycles
+
             when (_timerMode.value) {
                 TimerMode.FOCUS -> {
-                    if (_currentCycle.value >= totalCycles) {
+                    if (_currentCycle.value >= cycles) {
                         _timerMode.value = TimerMode.LONG_BREAK
                     } else {
                         _timerMode.value = TimerMode.SHORT_BREAK
@@ -132,17 +132,17 @@ class TimerRepository @Inject constructor(
                     _currentCycle.value = 1
                 }
             }
-            _timerState.value = TimerState.IDLE
             val initialTime = getInitialTimeForMode(_timerMode.value)
             _timeRemaining.value = initialTime
             _totalTimeInSeconds.value = initialTime
+            startCountdown()
         }
     }
 
     fun snooze() {
         scope.launch {
             val snoozeMinutes = settingsDataStore.snoozeTimeFlow.first()
-            val snoozeSeconds = snoozeMinutes * 60L
+            val snoozeSeconds = snoozeMinutes * timeConfig.multiplier
             _timeRemaining.value = snoozeSeconds
             _totalTimeInSeconds.value = snoozeSeconds
             startCountdown()
@@ -155,6 +155,6 @@ class TimerRepository @Inject constructor(
             TimerMode.SHORT_BREAK -> settingsDataStore.shortBreakTimeFlow.first()
             TimerMode.LONG_BREAK -> settingsDataStore.longBreakTimeFlow.first()
         }
-        return minutes * 60L
+        return minutes * timeConfig.multiplier
     }
 }

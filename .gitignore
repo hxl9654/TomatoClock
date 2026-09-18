@@ -43,3 +43,8 @@ google-services.json
 
 # Android Studio Profilers
 *.hprof
+
+# Kotlin compiler daemon cache
+.kotlin/
+
+scratch/

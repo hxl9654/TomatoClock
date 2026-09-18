@@ -1,4 +1,4 @@
-package com.example.tomatoclock
+package com.hxlxz.tomatoclock
 
 import android.content.Context
 import dagger.Module
@@ -21,5 +21,11 @@ object DataModule {
     @Provides
     fun provideCoroutineDispatcher(): kotlinx.coroutines.CoroutineDispatcher {
         return kotlinx.coroutines.Dispatchers.IO
+    }
+
+    @Provides
+    @Singleton
+    fun provideApplicationScope(dispatcher: kotlinx.coroutines.CoroutineDispatcher): kotlinx.coroutines.CoroutineScope {
+        return kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + dispatcher)
     }
 }

@@ -1,4 +1,4 @@
-package com.example.tomatoclock.ui.theme
+﻿package com.hxlxz.tomatoclock.ui.theme
 
 import android.app.Activity
 import android.os.Build
