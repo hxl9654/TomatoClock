@@ -1,0 +1,35 @@
+<resources>
+    <string name="app_name">番茄钟</string>
+    
+    <!-- Timer States -->
+    <string name="state_idle">准备开始</string>
+    <string name="state_focus">专注中</string>
+    <string name="state_short_break">短休息</string>
+    <string name="state_long_break">长休息</string>
+    <string name="state_paused">已暂停</string>
+    <string name="state_finished_focus">专注结束！</string>
+    <string name="state_finished_break">休息结束！</string>
+    <string name="cycle_count">第 %1$d / %2$d 次循环</string>
+
+    <!-- Controls -->
+    <string name="action_start">开始</string>
+    <string name="action_pause">暂停</string>
+    <string name="action_resume">继续</string>
+    <string name="action_stop">停止</string>
+    <string name="action_next">开始下个阶段</string>
+    <string name="action_snooze">稍后提醒 (Snooze)</string>
+    
+    <!-- Settings -->
+    <string name="settings_title">设置</string>
+    <string name="settings_durations">时长设置 (分钟)</string>
+    <string name="settings_focus_time">专注时长</string>
+    <string name="settings_short_break">短休息时长</string>
+    <string name="settings_long_break">长休息时长</string>
+    <string name="settings_cycles">长休息前循环次数</string>
+    <string name="settings_snooze_time">推迟提醒时长 (Snooze)</string>
+    <string name="settings_behavior">行为与提醒</string>
+    <string name="settings_auto_break">自动开始休息</string>
+    <string name="settings_auto_focus">自动开始专注</string>
+    <string name="settings_wake_screen">倒计时结束时点亮屏幕</string>
+    <string name="state_running">剩余时间: %1$s</string>
+</resources>
