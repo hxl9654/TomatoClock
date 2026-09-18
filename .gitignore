@@ -27,6 +27,7 @@ app/build/
 bin/
 gen/
 out/
+app/release/
 
 # Log Files
 *.log

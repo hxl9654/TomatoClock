@@ -1,4 +1,4 @@
-﻿package com.hxlxz.tomatoclock
+package com.hxlxz.tomatoclock
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -13,6 +13,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -57,10 +58,7 @@ class TimerService : Service() {
                 ACTION_START -> repository.startTimer()
                 ACTION_PAUSE -> repository.pauseTimer()
                 ACTION_STOP -> repository.stopTimer()
-                ACTION_NEXT -> {
-                    repository.nextPhase()
-                    repository.startTimer()
-                }
+                ACTION_NEXT -> repository.nextPhase()
                 ACTION_SNOOZE -> repository.snooze()
             }
         }
@@ -96,10 +94,13 @@ class TimerService : Service() {
         val timeString = String.format("%02d:%02d", minutes, seconds)
 
         val contentText = when (state) {
-            TimerState.IDLE -> getString(R.string.state_idle) + " " + title
-            TimerState.RUNNING -> getString(R.string.state_running, timeString)
-            TimerState.PAUSED -> getString(R.string.state_paused) + " - " + timeString
-            TimerState.FINISHED -> title + " " + getString(R.string.state_finished_focus)
+            TimerState.IDLE -> getString(R.string.notification_idle)
+            TimerState.RUNNING -> getString(R.string.notification_running, timeString)
+            TimerState.PAUSED -> getString(R.string.notification_paused, timeString)
+            TimerState.FINISHED -> when (mode) {
+                TimerMode.FOCUS -> getString(R.string.notification_finished_focus)
+                else -> getString(R.string.notification_finished_break)
+            }
         }
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -131,7 +132,7 @@ class TimerService : Service() {
                 builder.addAction(0, getString(R.string.action_stop), getServicePendingIntent(ACTION_STOP))
             }
             TimerState.FINISHED -> {
-                builder.addAction(0, getString(R.string.action_next), getServicePendingIntent(ACTION_NEXT))
+                builder.addAction(0, getString(R.string.action_next_short), getServicePendingIntent(ACTION_NEXT))
                 builder.addAction(0, getString(R.string.action_snooze), getServicePendingIntent(ACTION_SNOOZE))
             }
             TimerState.IDLE -> {
@@ -153,14 +154,19 @@ class TimerService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Timer Notifications",
+                getString(R.string.notification_channel_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Shows the ongoing timer and alerts when finished"
+                description = getString(R.string.notification_channel_desc)
             }
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.cancel()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

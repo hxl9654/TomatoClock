@@ -278,4 +278,82 @@ class TimerRepositoryTest {
         assertEquals(1, repository.currentCycle.value)
         assertEquals(25 * 60L, repository.timeRemaining.value)
     }
+
+    // ── 本次新增：响应式设置变更测试 ──────────────────────────────────────
+
+    @Test
+    fun `focusTimeFlow change updates timeRemaining when IDLE`() = runTest(testDispatcher) {
+        // 模拟 focusTimeFlow 发射新值 30 分钟
+        val focusFlow = kotlinx.coroutines.flow.MutableStateFlow(25)
+        coEvery { mockDataStore.focusTimeFlow } returns focusFlow
+
+        val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
+        val repo = TimerRepository(mockDataStore, TimeConfig(), testScope)
+        testScheduler.advanceUntilIdle()
+
+        // 初始值 25 分钟
+        assertEquals(25 * 60L, repo.timeRemaining.value)
+
+        // 设置改为 30 分钟
+        focusFlow.value = 30
+        testScheduler.advanceUntilIdle()
+
+        // IDLE 状态下首页时间应立即更新
+        assertEquals(30 * 60L, repo.timeRemaining.value)
+        assertEquals(30 * 60L, repo.totalTimeInSeconds.value)
+    }
+
+    @Test
+    fun `focusTimeFlow change does NOT affect timeRemaining when RUNNING`() = runTest(testDispatcher) {
+        val focusFlow = kotlinx.coroutines.flow.MutableStateFlow(25)
+        coEvery { mockDataStore.focusTimeFlow } returns focusFlow
+
+        val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
+        val repo = TimerRepository(mockDataStore, TimeConfig(), testScope)
+        testScheduler.advanceUntilIdle()
+
+        // 启动计时
+        repo.startTimer()
+        testScheduler.runCurrent()
+        assertEquals(TimerState.RUNNING, repo.timerState.value)
+
+        val timeBeforeChange = repo.timeRemaining.value
+
+        // 运行中修改设置
+        focusFlow.value = 30
+        testScheduler.advanceUntilIdle()
+
+        // RUNNING 状态下时间不应被 settings 变化覆盖
+        // (timeRemaining 可能因倒计时减少，但不会被重置为 30*60)
+        assert(repo.timeRemaining.value <= timeBeforeChange) {
+            "Running timer should not be reset by settings change"
+        }
+        assert(repo.timeRemaining.value < 30 * 60L) {
+            "Time should not jump to new setting value while running"
+        }
+    }
+
+    @Test
+    fun `cyclesFlow change always updates totalCycles regardless of timer state`() = runTest(testDispatcher) {
+        val cyclesFlow = kotlinx.coroutines.flow.MutableStateFlow(4)
+        coEvery { mockDataStore.cyclesFlow } returns cyclesFlow
+
+        val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
+        val repo = TimerRepository(mockDataStore, TimeConfig(), testScope)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(4, repo.totalCycles.value)
+
+        // IDLE 状态下修改
+        cyclesFlow.value = 6
+        testScheduler.advanceUntilIdle()
+        assertEquals(6, repo.totalCycles.value)
+
+        // RUNNING 状态下修改
+        repo.startTimer()
+        testScheduler.runCurrent()
+        cyclesFlow.value = 3
+        testScheduler.advanceUntilIdle()
+        assertEquals(3, repo.totalCycles.value)
+    }
 }

@@ -114,7 +114,7 @@ class TomatoClockE2ETest {
         // Go to settings
         composeTestRule.onNodeWithContentDescription("设置").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("时长设置 (分钟)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("时长设置（分钟）").assertIsDisplayed()
         
         // Find the text field containing "3" (our focus time) and increment it
         // Actually, it's easier to just click back and verify navigation works
@@ -142,12 +142,12 @@ class TomatoClockE2ETest {
         Thread.sleep(4000)
         composeTestRule.waitForIdle()
 
-        // Since autoStartBreak=false, we should see "开始下个阶段" and "稍后提醒 (Snooze)"
+        // Since autoStartBreak=false, we should see "开始下个阶段" and "推迟提醒"
         composeTestRule.onNodeWithText("开始下个阶段").assertIsDisplayed()
-        composeTestRule.onNodeWithText("稍后提醒 (Snooze)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("推迟提醒").assertIsDisplayed()
 
         // Click snooze
-        composeTestRule.onNodeWithText("稍后提醒 (Snooze)").performClick()
+        composeTestRule.onNodeWithText("推迟提醒").performClick()
         composeTestRule.waitForIdle()
 
         // Wait 3 seconds for snooze timer (2s) to finish

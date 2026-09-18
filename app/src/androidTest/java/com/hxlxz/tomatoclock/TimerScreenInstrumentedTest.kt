@@ -89,7 +89,7 @@ class TimerScreenInstrumentedTest {
         composeTestRule.waitForIdle()
         verify { viewModel.nextPhase() }
 
-        composeTestRule.onNodeWithText("稍后提醒 (Snooze)").performClick()
+        composeTestRule.onNodeWithText("推迟提醒").performClick()
         composeTestRule.waitForIdle()
         verify { viewModel.snooze() }
     }

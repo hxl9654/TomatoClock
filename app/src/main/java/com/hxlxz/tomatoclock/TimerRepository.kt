@@ -1,8 +1,6 @@
 package com.hxlxz.tomatoclock
 
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,12 +39,22 @@ class TimerRepository @Inject constructor(
     private var timerJob: Job? = null
 
     init {
+        // 持续监听专注时长设置：计时器空闲时立即更新首页显示
         scope.launch {
-            val focusTimeMin = settingsDataStore.focusTimeFlow.first()
-            val seconds = focusTimeMin * timeConfig.multiplier
-            _timeRemaining.value = seconds
-            _totalTimeInSeconds.value = seconds
-            _totalCycles.value = settingsDataStore.cyclesFlow.first()
+            settingsDataStore.focusTimeFlow.collect { focusTimeMin ->
+                if (_timerState.value == TimerState.IDLE) {
+                    val seconds = focusTimeMin * timeConfig.multiplier
+                    _timeRemaining.value = seconds
+                    _totalTimeInSeconds.value = seconds
+                }
+            }
+        }
+
+        // 持续监听循环次数设置：始终保持与设置同步
+        scope.launch {
+            settingsDataStore.cyclesFlow.collect { cycles ->
+                _totalCycles.value = cycles
+            }
         }
     }
 

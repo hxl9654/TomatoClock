@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- 仅针对 gradle.properties 忽略 Windows 路径转义误报 -->
+    <issue id="PropertyEscape">
+        <ignore path="../gradle.properties" />
+    </issue>
+</lint>

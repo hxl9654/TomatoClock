@@ -5,10 +5,11 @@ A modern Android Pomodoro Timer application built with Kotlin, Jetpack Compose, 
 
 ## 🎯 Features / 功能
 
-*   **Customizable Timers (自定义时长)**: Set custom durations for Focus (专注), Short Break (短休息), and Long Break (长休息).
+*   **Customizable Timers (自定义时长)**: Set custom durations for Focus (专注), Short Break (短休息), and Long Break (长休息). +/- buttons support long-press for fast adjustment.
 *   **Cycles (循环)**: Automatically track your pomodoro cycles and trigger a long break after a set number of focuses.
+*   **Real-time Settings Sync (设置实时同步)**: Home screen instantly reflects changes made in Settings while the timer is idle.
 *   **Auto-Transitions (自动流转)**: Optional settings to automatically start breaks or focus sessions.
-*   **Snooze (稍后提醒)**: Snooze a completed session to continue for a few more minutes.
+*   **Postpone Reminder (推迟提醒)**: Postpone a completed session to continue for a few more minutes.
 *   **Data Persistence (数据持久化)**: Settings are saved using Android DataStore.
 *   **Pure Chinese UI (纯中文界面)**: The user interface is completely in Simplified Chinese.
 
@@ -28,8 +29,17 @@ A modern Android Pomodoro Timer application built with Kotlin, Jetpack Compose, 
 The project relies heavily on automated testing as the primary gatekeeper for quality. 
 本项目深度依赖自动化测试作为质量控制的网关。
 
-To run tests / 运行测试命令：
+To run all checks at once / 一键运行所有检查:
 
+```powershell
+.\script\run_tests.ps1
+# 依次执行: [1] Lint静态分析 → [2] 本地单元测试 → [3] 仪器化E2E测试
+```
+
+*   **Lint (静态代码分析)**:
+    ```bash
+    ./gradlew lintDebug
+    ```
 *   **Local Unit Tests (本地单元测试)**:
     ```bash
     ./gradlew testDebugUnitTest

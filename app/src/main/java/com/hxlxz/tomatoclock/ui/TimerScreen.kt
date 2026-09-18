@@ -100,11 +100,11 @@ fun TimerScreen(
                 modifier = Modifier.size(300.dp)
             ) {
                 CircularProgressIndicator(
-                    progress = { 1f }, 
+                    progress = { 1f },
                     modifier = Modifier.fillMaxSize(),
                     color = colorPrimary.copy(alpha = 0.2f),
                     strokeWidth = 12.dp,
-                    strokeCap = StrokeCap.Round
+                    strokeCap = StrokeCap.Butt
                 )
                 
                 // Active progress

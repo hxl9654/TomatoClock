@@ -17,19 +17,33 @@
     <string name="action_resume">继续</string>
     <string name="action_stop">停止</string>
     <string name="action_next">开始下个阶段</string>
-    <string name="action_snooze">稍后提醒 (Snooze)</string>
+    <string name="action_snooze">推迟提醒</string>
+    
+    <!-- 通知栏专用短文字（空间有限） -->
+    <string name="action_next_short">下个阶段</string>
+    
+    <!-- 通知栏正文 -->
+    <string name="notification_idle">点击开始计时</string>
+    <string name="notification_running">剩余 %1$s</string>
+    <string name="notification_paused">已暂停 · 剩余 %1$s</string>
+    <string name="notification_finished_focus">专注结束，准备休息！</string>
+    <string name="notification_finished_break">休息结束，准备专注！</string>
     
     <!-- Settings -->
     <string name="settings_title">设置</string>
-    <string name="settings_durations">时长设置 (分钟)</string>
+    <string name="settings_durations">时长设置（分钟）</string>
     <string name="settings_focus_time">专注时长</string>
     <string name="settings_short_break">短休息时长</string>
     <string name="settings_long_break">长休息时长</string>
     <string name="settings_cycles">长休息前循环次数</string>
-    <string name="settings_snooze_time">推迟提醒时长 (Snooze)</string>
+    <string name="settings_snooze_time">推迟提醒时长（分钟）</string>
     <string name="settings_behavior">行为与提醒</string>
     <string name="settings_auto_break">自动开始休息</string>
     <string name="settings_auto_focus">自动开始专注</string>
     <string name="settings_wake_screen">倒计时结束时点亮屏幕</string>
-    <string name="state_running">剩余时间: %1$s</string>
+    
+    <!-- 通知渠道 -->
+    <string name="notification_channel_name">番茄钟通知</string>
+    <string name="notification_channel_desc">显示计时状态及结束提醒</string>
 </resources>
+

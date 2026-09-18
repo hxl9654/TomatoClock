@@ -1,5 +1,7 @@
 package com.hxlxz.tomatoclock.ui
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hxlxz.tomatoclock.R
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +43,7 @@ fun SettingsScreen(
                 title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 }
             )
@@ -147,8 +150,8 @@ fun NumberInputSetting(
         )
         
         Row(verticalAlignment = Alignment.CenterVertically) {
-            FilledTonalIconButton(
-                onClick = { 
+            RepeatableIconButton(
+                onClick = {
                     val current = textValue.toIntOrNull() ?: value
                     if (current > valueRange.first) {
                         onValueChange(current - 1)
@@ -156,7 +159,7 @@ fun NumberInputSetting(
                 },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                Icon(Icons.Default.Remove, contentDescription = "减少")
             }
             
             OutlinedTextField(
@@ -179,8 +182,8 @@ fun NumberInputSetting(
                 )
             )
             
-            FilledTonalIconButton(
-                onClick = { 
+            RepeatableIconButton(
+                onClick = {
                     val current = textValue.toIntOrNull() ?: value
                     if (current < valueRange.last) {
                         onValueChange(current + 1)
@@ -188,8 +191,50 @@ fun NumberInputSetting(
                 },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Increase")
+                Icon(Icons.Default.Add, contentDescription = "增加")
             }
+        }
+    }
+}
+
+/**
+ * 支持长按连续触发的图标按钮。
+ * 短按：触发一次 onClick。
+ * 长按：按下 500ms 后开始每 80ms 重复触发 onClick，松开停止。
+ */
+@Composable
+private fun RepeatableIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            delay(500L) // 长按触发前的初始等待
+            while (isPressed) {
+                onClick()
+                delay(80L) // 连续触发间隔
+            }
+        }
+    }
+
+    FilledTonalIconButton(
+        onClick = onClick,
+        modifier = modifier,
+        interactionSource = interactionSource,
+        content = { content() }
+    )
+}
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+private fun RepeatableIconButtonPreview() {
+    com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+        RepeatableIconButton(onClick = {}) {
+            Icon(Icons.Default.Add, contentDescription = "增加")
         }
     }
 }
