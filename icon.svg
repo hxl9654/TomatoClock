@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+    <defs>
+        <!-- Subtle shadow for the clock hands to give MD3 depth -->
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.2"/>
+        </filter>
+        <filter id="stemShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="2" flood-color="#000000" flood-opacity="0.15"/>
+        </filter>
+    </defs>
+
+    <!-- Tomato Body (Vibrant Red) -->
+    <circle cx="256" cy="276" r="190" fill="#EA4335"/>
+    
+    <!-- Tomato Body Top Highlight (Flat design style highlight) -->
+    <path d="M 256 86 C 151.06 86 66 171.06 66 276 C 66 280.1 66.15 284.18 66.4 288.21 C 71.36 188.08 154.2 108 256 108 C 357.8 108 440.64 188.08 445.6 288.21 C 445.85 284.18 446 280.1 446 276 C 446 171.06 360.94 86 256 86 Z" fill="#FFFFFF" opacity="0.15"/>
+
+    <!-- Clock Face Base (Darker Red inset for contrast) -->
+    <circle cx="256" cy="286" r="130" fill="#C5221F"/>
+
+    <!-- Clock Tick Marks -->
+    <g fill="#FFFFFF" opacity="0.8">
+        <!-- 12 o'clock -->
+        <rect x="252" y="166" width="8" height="20" rx="4"/>
+        <!-- 6 o'clock -->
+        <rect x="252" y="386" width="8" height="20" rx="4"/>
+        <!-- 9 o'clock -->
+        <rect x="136" y="282" width="20" height="8" rx="4"/>
+        <!-- 3 o'clock -->
+        <rect x="356" y="282" width="20" height="8" rx="4"/>
+    </g>
+
+    <!-- Clock Hands (White with drop shadow) -->
+    <g filter="url(#shadow)">
+        <!-- Minute Hand (Pointing to ~2 o'clock) -->
+        <line x1="256" y1="286" x2="316" y2="182" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" />
+        <!-- Hour Hand (Pointing to ~10 o'clock) -->
+        <line x1="256" y1="286" x2="196" y2="246" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" />
+        
+        <!-- Center Hub -->
+        <circle cx="256" cy="286" r="22" fill="#FFFFFF"/>
+        <!-- Center Hub Inner Dot -->
+        <circle cx="256" cy="286" r="8" fill="#EA4335"/>
+    </g>
+
+    <!-- Stem and Leaves -->
+    <g filter="url(#stemShadow)">
+        <!-- Left Leaf -->
+        <path d="M 256 120 C 220 120 180 150 150 140 C 140 136 145 110 180 95 C 210 82 240 100 256 120 Z" fill="#34A853"/>
+        <!-- Right Leaf -->
+        <path d="M 256 120 C 292 120 332 150 362 140 C 372 136 367 110 332 95 C 302 82 272 100 256 120 Z" fill="#34A853"/>
+        <!-- Top Stem Branch -->
+        <path d="M 256 126 C 240 100 240 60 256 40 C 272 60 272 100 256 126 Z" fill="#1E8E3E"/>
+    </g>
+</svg>

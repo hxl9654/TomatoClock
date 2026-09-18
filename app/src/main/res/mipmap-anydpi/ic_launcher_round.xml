@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="768"
+    android:viewportHeight="768">
+
+    <group android:translateX="128" android:translateY="128">
+        <!-- Tomato Body -->
+        <path
+            android:fillColor="#EA4335"
+            android:pathData="M 256,86 A 190,190 0 1,0 256,466 A 190,190 0 1,0 256,86" />
+
+        <!-- Tomato Body Top Highlight -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:fillAlpha="0.15"
+            android:pathData="M 256 86 C 151.06 86 66 171.06 66 276 C 66 280.1 66.15 284.18 66.4 288.21 C 71.36 188.08 154.2 108 256 108 C 357.8 108 440.64 188.08 445.6 288.21 C 445.85 284.18 446 280.1 446 276 C 446 171.06 360.94 86 256 86 Z"/>
+
+        <!-- Clock Face Base -->
+        <path
+            android:fillColor="#C5221F"
+            android:pathData="M 256,156 A 130,130 0 1,0 256,416 A 130,130 0 1,0 256,156" />
+
+        <!-- Clock Tick Marks -->
+        <path
+            android:strokeColor="#CCFFFFFF"
+            android:strokeWidth="8"
+            android:strokeLineCap="round"
+            android:pathData="M 256,170 L 256,182 M 256,390 L 256,402 M 140,286 L 152,286 M 360,286 L 372,286" />
+
+        <!-- Clock Hands -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="14"
+            android:strokeLineCap="round"
+            android:pathData="M 256,286 L 316,182" />
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="20"
+            android:strokeLineCap="round"
+            android:pathData="M 256,286 L 196,246" />
+
+        <!-- Center Hub -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 256,264 A 22,22 0 1,0 256,308 A 22,22 0 1,0 256,264" />
+        <path
+            android:fillColor="#EA4335"
+            android:pathData="M 256,278 A 8,8 0 1,0 256,294 A 8,8 0 1,0 256,278" />
+
+        <!-- Leaves -->
+        <path
+            android:fillColor="#34A853"
+            android:pathData="M 256 120 C 220 120 180 150 150 140 C 140 136 145 110 180 95 C 210 82 240 100 256 120 Z" />
+        <path
+            android:fillColor="#34A853"
+            android:pathData="M 256 120 C 292 120 332 150 362 140 C 372 136 367 110 332 95 C 302 82 272 100 256 120 Z" />
+        <path
+            android:fillColor="#1E8E3E"
+            android:pathData="M 256 126 C 240 100 240 60 256 40 C 272 60 272 100 256 126 Z" />
+    </group>
+</vector>
