@@ -68,14 +68,14 @@ class TomatoClockE2ETest {
     fun testFullTimerFlow() {
         composeTestRule.waitForIdle()
 
-        // Verify initial state
-        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+        // 【UI修复】IDLE 状态显示"准备专注"而不是"专注中"
+        composeTestRule.onNodeWithText("准备专注").assertIsDisplayed()
 
         // 2. Start the timer
         composeTestRule.onNodeWithText("开始").performClick()
         composeTestRule.waitForIdle()
 
-        // Verify it changed to RUNNING state
+        // Verify it changed to RUNNING state: 现在正在运行显示"专注中"
         composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
         composeTestRule.onNodeWithText("暂停").assertIsDisplayed()
         composeTestRule.onNodeWithText("停止").assertIsDisplayed()
@@ -89,19 +89,22 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("开始下个阶段").performClick()
         composeTestRule.waitForIdle()
 
+        // SHORT_BREAK RUNNING 状态显示"短休息"
         composeTestRule.onNodeWithText("短休息").assertIsDisplayed()
 
         // 5. Test Pause functionality during break
         composeTestRule.onNodeWithText("暂停").performClick()
         composeTestRule.waitForIdle()
+        // 【UI修复】SHORT_BREAK PAUSED 显示"短休息已暂停"
+        composeTestRule.onNodeWithText("短休息已暂停").assertIsDisplayed()
         composeTestRule.onNodeWithText("继续").assertIsDisplayed()
 
         // 6. Test Stop functionality
         composeTestRule.onNodeWithText("停止").performClick()
         composeTestRule.waitForIdle()
 
-        // Verify it resets to FOCUS mode and initial time (00:03)
-        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+        // Verify it resets to FOCUS IDLE mode: 显示"准备专注"
+        composeTestRule.onNodeWithText("准备专注").assertIsDisplayed()
         composeTestRule.onNodeWithText("00:03").assertIsDisplayed()
     }
     
@@ -113,13 +116,13 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithContentDescription("设置").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("时长设置（分钟）").assertIsDisplayed()
-        
+
         // Find the text field containing "3" (our focus time) and increment it
         composeTestRule.onNodeWithContentDescription("返回").performClick()
         composeTestRule.waitForIdle()
-        
-        // Verify we are back on Timer screen
-        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+
+        // 【UI修复】返回后仍处于 IDLE，显示"准备专注"
+        composeTestRule.onNodeWithText("准备专注").assertIsDisplayed()
     }
 
     @Test
@@ -128,7 +131,8 @@ class TomatoClockE2ETest {
         
         
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+        // 【UI修复】IDLE 状态显示"准备专注"
+        composeTestRule.onNodeWithText("准备专注").assertIsDisplayed()
 
         // Start timer
         composeTestRule.onNodeWithText("开始").performClick()
@@ -189,7 +193,7 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("开始下个阶段").performClick()
         composeTestRule.waitForIdle()
 
-        // Cycle 2: Focus (reads 3s again)
+        // Cycle 2: Focus RUNNING (reads 3s again)
         composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
         
         // Wait for Focus to finish (3s)

@@ -159,7 +159,65 @@ class TimerScreenVrtTest {
                 )
             }
         }
-        
+
+        composeTestRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    fun testTimerScreenFocusPausedSnapshot() {
+        // 【L-7修复】补全 FOCUS + PAUSED 状态快照，
+        // 验证新的"专注已暂停"提示语渲染正确
+        composeTestRule.setContent {
+            com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+                TimerScreenContent(
+                    timerMode = TimerMode.FOCUS,
+                    timerState = TimerState.PAUSED,
+                    timeRemaining = 900L,
+                    totalTime = 1500L,
+                    currentCycle = 2,
+                    totalCycles = 4,
+                    flashScreen = false,
+                    onNavigateToSettings = {},
+                    onStart = {},
+                    onPause = {},
+                    onStop = {},
+                    onNextPhase = {},
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
+                )
+            }
+        }
+
+        composeTestRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    fun testTimerScreenIdleSnapshot_withNewLabel() {
+        // 【UI修复】验证 IDLE 状态下显示"准备专注"而非"专注中"
+        composeTestRule.setContent {
+            com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+                TimerScreenContent(
+                    timerMode = TimerMode.FOCUS,
+                    timerState = TimerState.IDLE,
+                    timeRemaining = 1500L,
+                    totalTime = 1500L,
+                    currentCycle = 1,
+                    totalCycles = 4,
+                    flashScreen = false,
+                    onNavigateToSettings = {},
+                    onStart = {},
+                    onPause = {},
+                    onStop = {},
+                    onNextPhase = {},
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithContentDescription("设置").assertIsDisplayed()
         composeTestRule.onRoot().captureRoboImage()
     }
 }

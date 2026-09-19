@@ -130,10 +130,27 @@ fun TimerScreenContent(
     val locale = LocalConfiguration.current.locales[0]
     val timeString = String.format(locale, "%02d:%02d", minutes, seconds)
 
-    val modeText = when (timerMode) {
-        TimerMode.FOCUS -> stringResource(R.string.state_focus)
-        TimerMode.SHORT_BREAK -> stringResource(R.string.state_short_break)
-        TimerMode.LONG_BREAK -> stringResource(R.string.state_long_break)
+    val modeText = when (timerState) {
+        TimerState.IDLE -> when (timerMode) {
+            TimerMode.FOCUS -> stringResource(R.string.state_idle_focus)
+            TimerMode.SHORT_BREAK -> stringResource(R.string.state_idle_short_break)
+            TimerMode.LONG_BREAK -> stringResource(R.string.state_idle_long_break)
+        }
+        TimerState.RUNNING -> when (timerMode) {
+            TimerMode.FOCUS -> stringResource(R.string.state_focus)
+            TimerMode.SHORT_BREAK -> stringResource(R.string.state_short_break)
+            TimerMode.LONG_BREAK -> stringResource(R.string.state_long_break)
+        }
+        TimerState.PAUSED -> when (timerMode) {
+            TimerMode.FOCUS -> stringResource(R.string.state_paused_focus)
+            TimerMode.SHORT_BREAK -> stringResource(R.string.state_paused_short_break)
+            TimerMode.LONG_BREAK -> stringResource(R.string.state_paused_long_break)
+        }
+        TimerState.FINISHED -> when (timerMode) {
+            TimerMode.FOCUS -> stringResource(R.string.state_finished_focus)
+            TimerMode.SHORT_BREAK -> stringResource(R.string.state_finished_break)
+            TimerMode.LONG_BREAK -> stringResource(R.string.state_finished_break)
+        }
     }
     
     val colorPrimary = when (timerMode) {

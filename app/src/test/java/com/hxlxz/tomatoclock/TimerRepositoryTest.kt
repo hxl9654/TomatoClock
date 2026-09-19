@@ -607,4 +607,93 @@ class TimerRepositoryTest {
             })
         }
     }
+
+    // 【L-4修复】补全 saveCurrentState 的 PAUSED 场景测试
+    @Test
+    fun `saveCurrentState when PAUSED persists correct pausedTimeRemaining`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+        advanceTimeBy(5000.milliseconds)
+
+        repository.pauseTimer()
+        testScheduler.runCurrent()
+
+        repository.saveCurrentState()
+
+        io.mockk.coVerify {
+            mockDataStore.saveTimerState(match {
+                it.state == TimerState.PAUSED &&
+                        it.mode == TimerMode.FOCUS &&
+                        it.pausedTimeRemaining > 0L &&
+                        it.targetEndTimeWallClock == 0L // PAUSED 时不保存 targetEndTime
+            })
+        }
+    }
+
+    @Test
+    fun `saveCurrentState when IDLE persists IDLE state`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        // 默认为 IDLE
+
+        repository.saveCurrentState()
+
+        io.mockk.coVerify {
+            mockDataStore.saveTimerState(match {
+                it.state == TimerState.IDLE &&
+                        it.mode == TimerMode.FOCUS &&
+                        it.totalTimeInSeconds == 25 * 60L
+            })
+        }
+    }
+
+    // 【H-4修复验证】addTime 后 saveCurrentState 应保存延长后的 totalTimeInSeconds
+    @Test
+    fun `saveCurrentState after addTime persists extended totalTimeInSeconds`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+
+        // 加 5 分钟 (300 秒)
+        repository.addTime(300L)
+        testScheduler.runCurrent()
+
+        repository.saveCurrentState()
+
+        io.mockk.coVerify {
+            mockDataStore.saveTimerState(match {
+                it.state == TimerState.RUNNING &&
+                        // totalTimeInSeconds 应包含加时后的实际总时长（25*60 + 300 = 1800）
+                        it.totalTimeInSeconds == (25 * 60 + 300).toLong()
+            })
+        }
+    }
+
+    // 【C-2修复验证】恢复后 settings 监听不应在 PAUSED 状态覆盖已恢复的 timeRemaining
+    @Test
+    fun `restoring PAUSED state does not get overwritten by focusTimeFlow collector`() = runTest(testDispatcher) {
+        val pausedRemaining = 720L // 12 分钟
+        val savedState = SavedTimerState(
+            state = TimerState.PAUSED,
+            mode = TimerMode.FOCUS,
+            targetEndTimeWallClock = 0L,
+            pausedTimeRemaining = pausedRemaining,
+            currentCycle = 2,
+            lastSavedTimestamp = System.currentTimeMillis(),
+            totalTimeInSeconds = 1500L
+        )
+        coEvery { mockDataStore.savedTimerStateFlow } returns flowOf(savedState)
+
+        val restoredRepo = TimerRepository(
+            mockDataStore,
+            TimeConfig(),
+            CoroutineScope(testDispatcher + SupervisorJob()),
+            mockAlarmScheduler
+        )
+        testScheduler.advanceUntilIdle()
+
+        // PAUSED 状态下，timeRemaining 应保持恢复值，不被 focusTimeFlow 覆盖
+        assertEquals(pausedRemaining, restoredRepo.timeRemaining.value)
+        assertEquals(TimerState.PAUSED, restoredRepo.timerState.value)
+    }
 }

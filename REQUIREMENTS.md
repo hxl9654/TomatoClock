@@ -50,6 +50,11 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
     *   中心以 `MM:SS` 大字号显示剩余时间。
     *   展示当前位于第几次循环（如：第 1 / 4 次循环）。
 *   控制按钮组根据当前状态 (`IDLE`, `RUNNING`, `PAUSED`, `FINISHED`) 动态变化。
+*   **状态文字语义规范 (State Label Convention)**：
+    *   `IDLE` 时不得显示正在进行的模式名称（如"专注中"），应按模式显示"准备专注 / 准备短休息 / 准备长休息"。
+    *   `PAUSED` 时应按模式显示"专注已暂停 / 短休息已暂停 / 长休息已暂停"，而非笼统的"已暂停"。
+    *   `RUNNING` 时显示当前模式名称："专注中 / 短休息 / 长休息"。
+    *   `FINISHED` 时显示"专注结束！/ 休息结束！"。
 
 ## 4. 架构及技术要求 (Architecture & Technical Requirements)
 *   必须使用 **Jetpack Compose** 搭建 UI。
@@ -60,8 +65,23 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
 *   后台执行必须基于 **系统闹钟服务 (AlarmManager.setAlarmClock)** 配合 **全屏意图 (FullScreenIntent)**，彻底抛弃不可靠的 `PowerManager.PARTIAL_WAKE_LOCK`，保障应用切入后台或深度锁屏息屏时倒计时正常运行和强制唤醒亮屏。
 *   铃声及震动等硬件副作用应隔离至独立的 `AlarmPlayer` 模块单例中。
 *   禁止使用 `Thread.sleep` 阻塞主线程；状态更新通过 `StateFlow`。
+*   **安全规范**：
+    *   DataStore 读取枚举值时必须使用 `runCatching { }.getOrNull()` 防止 `IllegalArgumentException` 崩溃。
+    *   DataStore 的 `Flow.first()` 不得在 Main dispatcher 下直接调用，应使用 `withContext(Dispatchers.IO)` 切换。
+    *   `TimerRepository.init` 块中，状态恢复逻辑（Step 1）必须完全执行后才能启动设置监听协程（Step 2），防止竞态条件。
+*   **持久化字段规范**：`SavedTimerState` 必须包含 `totalTimeInSeconds`，以正确恢复 `addTime()` 延长后的进度圆弧。
 
 ## 5. 质量保证 (Quality Assurance)
-*   所有业务逻辑需经过 JUnit 单元测试覆盖。
-*   所有核心流程必须通过基于 Emulator 的端到端 (E2E) 测试验证。
+*   所有业务逻辑需经过 JUnit 单元测试覆盖，包含：
+    *   `TimerRepository`：计时流转、状态恢复、addTime、saveCurrentState（RUNNING/PAUSED/IDLE 三种场景）
+    *   `SettingsDataStore`：所有设置项的读写及默认值（含 ringtone、flashScreen）
+    *   `AlarmPlayer`：play/preview/stop 的幂等性及 H-5 场景（preview → play 不误停）
+    *   `SettingsViewModel`、`TimerViewModel`：各保存方法及预览调用
+*   所有核心流程必须通过基于 Emulator 的端到端 (E2E) 测试验证，包括：
+    *   完整计时流（IDLE → RUNNING → FINISHED → 下一阶段）
+    *   暂停/继续/停止
+    *   长休息触发流
+    *   推迟提醒
+*   视觉回归测试 (VRT)：覆盖 IDLE/RUNNING/PAUSED/FINISHED × FOCUS/SHORT_BREAK/LONG_BREAK 的关键组合快照。
 *   针对测试环境，引入加速机制 (Time Multiplier) 确保 E2E 测试在合理时间内完成。
+*   CI 测试脚本必须解析 HTML 报告，在执行 0 个测试时立即失败（防止静默跳过）。

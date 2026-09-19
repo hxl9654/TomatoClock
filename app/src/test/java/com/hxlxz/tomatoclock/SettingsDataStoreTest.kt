@@ -43,6 +43,9 @@ class SettingsDataStoreTest {
         assertEquals(0, dataStore.soundModeFlow.first())
         assertEquals(0, dataStore.vibrationModeFlow.first())
         assertEquals(true, dataStore.wakeScreenFlow.first())
+        // 【L-3修复】补全缺失的默认值断言
+        assertEquals(1, dataStore.ringtoneFlow.first())      // 默认 CHIME (index=1)
+        assertEquals(true, dataStore.flashScreenFlow.first()) // 默认启用闪烁
     }
 
     @Test

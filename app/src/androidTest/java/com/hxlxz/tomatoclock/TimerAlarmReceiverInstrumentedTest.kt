@@ -36,14 +36,20 @@ class TimerAlarmReceiverInstrumentedTest {
     }
 
     @Test
-    fun `forceFinishTimer when IDLE does not change state`() {
-        // Since we are using a mock repository, we can just test the mock interaction
+    fun `forceFinishTimer when IDLE does not change state - receiver still calls forceFinishTimer`() {
+        // 【C-1修复】原测试体为空，仅有注释，不产生任何断言。
+        // 正确行为：Receiver 收到 alarm 时，始终调用 forceFinishTimer(fromAlarm=true)，
+        // 而 Repository 自身负责判断 IDLE 状态下不做任何状态变更（已在 TimerRepositoryTest 验证）。
         val stateFlow = kotlinx.coroutines.flow.MutableStateFlow(TimerState.IDLE)
         io.mockk.every { mockRepo.timerState } returns stateFlow
-        
-        // This test was originally for the real repository, but we can verify our receiver
-        // doesn't do anything strange. Actually, this test is redundant now that we mock.
-        // We will just verify that forceFinishTimer on IDLE is tested in TimerRepositoryTest.
+
+        // 触发 receiver
+        val intent = Intent(ApplicationProvider.getApplicationContext(), TimerAlarmReceiver::class.java)
+        val receiver = TimerAlarmReceiver()
+        receiver.onReceive(ApplicationProvider.getApplicationContext(), intent)
+
+        // Receiver 应调用 forceFinishTimer(fromAlarm=true)；状态是否改变由 Repository 内部逻辑决定。
+        io.mockk.verify(exactly = 1) { mockRepo.forceFinishTimer(fromAlarm = true) }
     }
 
     @Test

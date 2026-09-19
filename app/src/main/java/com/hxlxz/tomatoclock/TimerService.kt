@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.withContext
 import java.util.Locale
 import javax.inject.Inject
 
@@ -79,14 +80,18 @@ class TimerService : Service() {
             }
             TimerState.FINISHED -> {
                 if (!repository.suppressAlarm.value) {
-                    // Read latest settings
-                    val soundMode = SoundMode.fromInt(settingsDataStore.soundModeFlow.first())
-                    val vibrationMode = VibrationMode.fromInt(settingsDataStore.vibrationModeFlow.first())
-                    val ringtone = Ringtone.fromInt(settingsDataStore.ringtoneFlow.first())
-                    
+                    // 【C-3修复】DataStore 的 Flow.first() 是 IO 操作，
+                    // 不能在 Main dispatcher 下直接调用，否则可能引发 ANR。
+                    val (soundMode, vibrationMode, ringtone) = withContext(Dispatchers.IO) {
+                        Triple(
+                            SoundMode.fromInt(settingsDataStore.soundModeFlow.first()),
+                            VibrationMode.fromInt(settingsDataStore.vibrationModeFlow.first()),
+                            Ringtone.fromInt(settingsDataStore.ringtoneFlow.first())
+                        )
+                    }
                     alarmPlayer.play(soundMode, vibrationMode, ringtone)
                 }
-                
+
                 // Release the persistent partial wake lock since we are no longer running.
                 releaseWakeLock()
             }

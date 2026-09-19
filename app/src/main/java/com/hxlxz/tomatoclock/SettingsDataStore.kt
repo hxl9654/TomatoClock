@@ -38,21 +38,28 @@ class SettingsDataStore(private val context: Context) {
         val PAUSED_TIME_REMAINING = longPreferencesKey("paused_time_remaining")
         val CURRENT_CYCLE = intPreferencesKey("current_cycle")
         val LAST_SAVED_TIMESTAMP = longPreferencesKey("last_saved_timestamp")
+        /** 【H-4修复】保存当前总时长，包含 addTime 延长后的实际値。 */
+        val TOTAL_TIME_IN_SECONDS = longPreferencesKey("total_time_in_seconds")
     }
 
     val savedTimerStateFlow: Flow<SavedTimerState?> = context.dataStore.data.map { preferences ->
         val stateStr = preferences[TIMER_STATE]
         val modeStr = preferences[TIMER_MODE]
         val timestamp = preferences[LAST_SAVED_TIMESTAMP]
-        
+
         if (stateStr != null && modeStr != null && timestamp != null) {
+            // 【H-6修复】使用 runCatching 包裹 valueOf，
+            // 避免 app 更新导致枚举重命名或 DataStore 数据损坏时产生 IllegalArgumentException 崩溃。
+            val state = runCatching { TimerState.valueOf(stateStr) }.getOrNull() ?: return@map null
+            val mode = runCatching { TimerMode.valueOf(modeStr) }.getOrNull() ?: return@map null
             SavedTimerState(
-                state = TimerState.valueOf(stateStr),
-                mode = TimerMode.valueOf(modeStr),
+                state = state,
+                mode = mode,
                 targetEndTimeWallClock = preferences[TARGET_END_TIME_WALL_CLOCK] ?: 0L,
                 pausedTimeRemaining = preferences[PAUSED_TIME_REMAINING] ?: 0L,
                 currentCycle = preferences[CURRENT_CYCLE] ?: 1,
-                lastSavedTimestamp = timestamp
+                lastSavedTimestamp = timestamp,
+                totalTimeInSeconds = preferences[TOTAL_TIME_IN_SECONDS] ?: 0L
             )
         } else {
             null
@@ -168,6 +175,7 @@ class SettingsDataStore(private val context: Context) {
             preferences[PAUSED_TIME_REMAINING] = state.pausedTimeRemaining
             preferences[CURRENT_CYCLE] = state.currentCycle
             preferences[LAST_SAVED_TIMESTAMP] = state.lastSavedTimestamp
+            preferences[TOTAL_TIME_IN_SECONDS] = state.totalTimeInSeconds // 【H-4修复】
         }
     }
     
@@ -179,6 +187,7 @@ class SettingsDataStore(private val context: Context) {
             preferences.remove(PAUSED_TIME_REMAINING)
             preferences.remove(CURRENT_CYCLE)
             preferences.remove(LAST_SAVED_TIMESTAMP)
+            preferences.remove(TOTAL_TIME_IN_SECONDS) // 【H-4修复】
         }
     }
 }

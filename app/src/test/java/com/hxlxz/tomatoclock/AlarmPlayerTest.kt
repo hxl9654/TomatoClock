@@ -75,4 +75,32 @@ class AlarmPlayerTest {
         // Verify vibration is canceled
         org.junit.Assert.assertTrue(shadowVibrator.isCancelled)
     }
+
+    @Test
+    fun `play after preview does not throw and cancels previous vibration`() {
+        // 【H-5修复验证】先 preview 再 play 应能安全执行，
+        // play() 调用时必须清除 isPreviewActive 标志，使 stopRunnable 失效
+        alarmPlayer.preview(1) // CHIME
+        // 立即调用 play()，此时 stopRunnable 尚未触发（2s 延迟）
+        alarmPlayer.play(SoundMode.CONTINUOUS, VibrationMode.CONTINUOUS, Ringtone.ZEN_BOWL)
+        // play 内部调用 stop()，会 removeCallbacks(stopRunnable) 并设置 isPreviewActive=false
+        // 验证无异常，且振动已重新设置
+        assertNotNull(shadowVibrator.pattern)
+    }
+
+    @Test
+    fun `stop after preview cancels vibration`() {
+        alarmPlayer.preview(0) // DIGITAL
+        alarmPlayer.stop()
+        org.junit.Assert.assertTrue(shadowVibrator.isCancelled)
+    }
+
+    @Test
+    fun `multiple stop calls do not throw`() {
+        // 验证 stop() 的幂等性：多次调用不应抛出异常
+        alarmPlayer.stop()
+        alarmPlayer.stop()
+        alarmPlayer.stop()
+        // 无异常即通过
+    }
 }

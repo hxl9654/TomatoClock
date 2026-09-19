@@ -26,6 +26,16 @@ class TimerRepository @Inject constructor(
     private val _timerMode = MutableStateFlow(TimerMode.FOCUS)
     val timerMode: StateFlow<TimerMode> = _timerMode.asStateFlow()
 
+    /**
+     * 是否抑制计时结束提醒（铃声/振动）。
+     *
+     * 设置为 true 的场景：
+     * 1. 用户手动跳过当前阶段（[forceFinishTimer] 传入 isSkipped=true）
+     * 2. 从后台恢复时，计时结束超过 10 分钟（用户早已知晓，无需补发提醒）
+     * 3. 从后台恢复时，当前状态已是 FINISHED（之前已触发过提醒）
+     *
+     * 由 [TimerService.handleStateSideEffects] 消费。
+     */
     private val _suppressAlarm = MutableStateFlow(false)
     val suppressAlarm: StateFlow<Boolean> = _suppressAlarm.asStateFlow()
 
@@ -58,7 +68,10 @@ class TimerRepository @Inject constructor(
 
     init {
         scope.launch {
-            // 1. 恢复状态 (Restore state)
+            // ── Step 1: 恢复持久化状态 ────────────────────────────────────────────
+            // 【C-2修复】必须先完成状态恢复，再启动设置监听协程，避免竞态条件：
+            // focusTimeMin 使用 SharingStarted.Eagerly 会立即发射默认值，
+            // 若监听器先于恢复逻辑运行，可能将恢复的时间覆盖回默认专注时间。
             val savedState = settingsDataStore.savedTimerStateFlow.first()
             if (savedState != null) {
                 val now = System.currentTimeMillis()
@@ -68,7 +81,13 @@ class TimerRepository @Inject constructor(
                 } else {
                     _timerMode.value = savedState.mode
                     _currentCycle.value = savedState.currentCycle
-                    _totalTimeInSeconds.value = getInitialTimeForMode(savedState.mode)
+                    // 【H-4修复】优先使用保存的 totalTimeInSeconds，
+                    // 以正确恢复用户通过 addTime() 延长后的进度圆弧。
+                    _totalTimeInSeconds.value = if (savedState.totalTimeInSeconds > 0L) {
+                        savedState.totalTimeInSeconds
+                    } else {
+                        getInitialTimeForMode(savedState.mode) // 旧数据兼容 fallback
+                    }
 
                     when (savedState.state) {
                         TimerState.RUNNING -> {
@@ -105,7 +124,10 @@ class TimerRepository @Inject constructor(
                 }
             }
 
-            // 2. 持续监听专注时长设置：计时器空闲时立即更新首页显示
+            // ── Step 2: 状态恢复完成后，再启动响应式设置监听 ────────────────────
+            // 保证监听器不会干扰上方的恢复逻辑。
+
+            // 持续监听专注时长设置：计时器空闲时立即更新首页显示
             launch {
                 focusTimeMin.collect { focusTime ->
                     if (_timerState.value == TimerState.IDLE) {
@@ -116,7 +138,7 @@ class TimerRepository @Inject constructor(
                 }
             }
 
-            // 3. 持续监听循环次数设置：始终保持与设置同步
+            // 持续监听循环次数设置：始终保持与设置同步
             launch {
                 settingsDataStore.cyclesFlow.collect { cycles ->
                     _totalCycles.value = cycles
@@ -153,7 +175,8 @@ class TimerRepository @Inject constructor(
                 val remainingMs = targetEndTimeMs - now
                 if (remainingMs <= 0) {
                     _timeRemaining.value = 0
-                    alarmScheduler.cancelAlarm()
+                    // 【H-3修复】此处无需调用 cancelAlarm()，
+                    // onTimerFinished() 内部已统一处理取消逻辑，避免双重取消。
                     onTimerFinished()
                     break
                 }
@@ -270,14 +293,15 @@ class TimerRepository @Inject constructor(
         val targetEndTimeWallClock = if (state == TimerState.RUNNING) {
             System.currentTimeMillis() + (targetEndTimeMs - SystemClock.elapsedRealtime())
         } else 0L
-        
+
         val savedState = SavedTimerState(
             state = state,
             mode = mode,
             targetEndTimeWallClock = targetEndTimeWallClock,
             pausedTimeRemaining = pausedTimeRemainingSeconds,
             currentCycle = _currentCycle.value,
-            lastSavedTimestamp = System.currentTimeMillis()
+            lastSavedTimestamp = System.currentTimeMillis(),
+            totalTimeInSeconds = _totalTimeInSeconds.value // 【H-4修复】保存当前总时长
         )
         settingsDataStore.saveTimerState(savedState)
     }

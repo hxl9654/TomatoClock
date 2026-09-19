@@ -29,10 +29,28 @@ class AlarmPlayer @Inject constructor(
         context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
     }
     private val handler = Handler(Looper.getMainLooper())
-    private val stopRunnable = Runnable { stop() }
+
+    /**
+     * 【H-5修复】标记是否处于预览播放状态。
+     * 当 [play] 被调用时立即置 false，使 [stopRunnable] 失效，
+     * 避免先调用 [preview] 后再调用 [play]，
+     * 残留的 2 秒延迟误停止正在响铃的报警声。
+     */
+    private var isPreviewActive = false
+
+    private val stopRunnable = Runnable {
+        // 【H-5修复】只有仍处于预览状态时才停止
+        if (isPreviewActive) {
+            isPreviewActive = false
+            stop()
+        }
+    }
 
     @SuppressLint("ObsoleteSdkInt")
     fun play(soundMode: SoundMode, vibrationMode: VibrationMode, ringtoneIndex: Ringtone) {
+        // 【H-5修复】调用 play() 时立即标记预览状态为 false，
+        // 使任何残留的 stopRunnable 失效。
+        isPreviewActive = false
         stop() // Ensure previous is stopped
 
         // Setup Vibrator
@@ -89,6 +107,7 @@ class AlarmPlayer @Inject constructor(
 
     fun preview(ringtoneIndex: Int) {
         stop()
+        isPreviewActive = true // 【H-5修复】标记预览状态
         val audioRes = getAudioRes(ringtoneIndex)
         try {
             mediaPlayer = MediaPlayer.create(context, audioRes)?.apply {
@@ -98,13 +117,15 @@ class AlarmPlayer @Inject constructor(
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .build()
                 )
+                // 【L-2修复】预览时循环播放，并在 2 秒后由 stopRunnable 停止。
+                // 这是有意设计，确保短于 2 秒的音效也能被听到。
                 isLooping = true
                 start()
             }
             handler.postDelayed(stopRunnable, 2000L)
         } catch (e: Exception) {
-                Log.e("AlarmPlayer", "Error: ${e.message}", e)
-            }
+            Log.e("AlarmPlayer", "Error: ${e.message}", e)
+        }
     }
 
     private fun getAudioRes(ringtoneIndex: Int): Int {
@@ -129,13 +150,13 @@ class AlarmPlayer @Inject constructor(
             }
             mediaPlayer = null
         } catch (e: Exception) {
-                Log.e("AlarmPlayer", "Error: ${e.message}", e)
-            }
+            Log.e("AlarmPlayer", "Error releasing MediaPlayer on stop: ${e.message}", e)
+        }
 
         try {
             vibrator.cancel()
         } catch (e: Exception) {
-                Log.e("AlarmPlayer", "Error: ${e.message}", e)
-            }
+            Log.e("AlarmPlayer", "Error cancelling vibrator on stop: ${e.message}", e)
+        }
     }
 }

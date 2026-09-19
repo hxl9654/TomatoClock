@@ -9,6 +9,14 @@
     <string name="state_paused">已暂停</string>
     <string name="state_finished_focus">专注结束！</string>
     <string name="state_finished_break">休息结束！</string>
+    <!-- 未开始时，按模式显示不同提示 -->
+    <string name="state_idle_focus">准备专注</string>
+    <string name="state_idle_short_break">准备短休息</string>
+    <string name="state_idle_long_break">准备长休息</string>
+    <!-- 暂停时，按模式显示不同提示 -->
+    <string name="state_paused_focus">专注已暂停</string>
+    <string name="state_paused_short_break">短休息已暂停</string>
+    <string name="state_paused_long_break">长休息已暂停</string>
     <string name="cycle_count">第 %1$d / %2$d 次循环</string>
 
     <!-- Controls -->
@@ -39,7 +47,7 @@
     <string name="settings_short_break">短休息时长</string>
     <string name="settings_long_break">长休息时长</string>
     <string name="settings_cycles">长休息前循环次数</string>
-    <string name="settings_snooze_time">推迟提醒时长（分钟）</string>
+    <string name="settings_snooze_time">推迟提醒时长</string>
     <string name="settings_behavior">行为与提醒</string>
     <string name="settings_wake_screen">倒计时结束时点亮屏幕</string>
     <string name="settings_flash_screen">结束时界面呼吸闪烁</string>
