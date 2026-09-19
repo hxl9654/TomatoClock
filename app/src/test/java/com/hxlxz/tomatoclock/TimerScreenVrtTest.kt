@@ -2,6 +2,8 @@ package com.hxlxz.tomatoclock
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.assertIsDisplayed
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -70,6 +72,9 @@ class TimerScreenVrtTest {
                 )
             }
         }
+        
+        composeTestRule.onNodeWithContentDescription("加5分钟").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("跳过当前周期").assertIsDisplayed()
         
         composeTestRule.onRoot().captureRoboImage()
     }

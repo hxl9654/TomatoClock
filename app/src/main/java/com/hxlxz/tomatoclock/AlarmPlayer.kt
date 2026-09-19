@@ -70,7 +70,9 @@ class AlarmPlayer @Inject constructor(
                                 if (mediaPlayer == it) {
                                     mediaPlayer = null
                                 }
-                            } catch (e: Exception) {}
+                            } catch (e: Exception) {
+                                Log.e("AlarmPlayer", "Error releasing mediaPlayer: ${e.message}", e)
+                            }
                         }
                     } else {
                         isLooping = true

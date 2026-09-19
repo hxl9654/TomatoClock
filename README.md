@@ -6,6 +6,8 @@ A modern Android Pomodoro Timer application built with Kotlin, Jetpack Compose, 
 ## 🎯 Features / 功能
 
 *   **Customizable Timers (自定义时长)**: Set custom durations for Focus (专注), Short Break (短休息), and Long Break (长休息). +/- buttons support long-press for fast adjustment.
+*   **Quick Actions (快捷操作)**: Add 5 minutes to the current timer or skip the current phase entirely. (在倒计时进行中支持“加5分钟”与“跳过当前周期”功能)
+*   **Independent Notifications (独立通知设置)**: Separately configure Sound Mode and Vibration Mode. (独立配置铃声与震动模式，支持持续、单次或关闭)
 *   **Cycles (循环)**: Automatically track your pomodoro cycles and trigger a long break after a set number of focuses.
 *   **Real-time Settings Sync (设置实时同步)**: Home screen instantly reflects changes made in Settings while the timer is idle.
 *   **Auto-Transitions (自动流转)**: Optional settings to automatically start breaks or focus sessions.
