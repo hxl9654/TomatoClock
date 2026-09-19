@@ -6,7 +6,8 @@ import org.junit.Test
 
 class TimerViewModelTest {
     private val repository: TimerRepository = mockk(relaxed = true)
-    private val viewModel = TimerViewModel(repository)
+    private val dataStore: SettingsDataStore = mockk(relaxed = true)
+    private val viewModel = TimerViewModel(repository, dataStore)
 
     @Test
     fun `test startTimer delegates to repository`() {

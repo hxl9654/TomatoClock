@@ -1,4 +1,4 @@
-﻿package com.hxlxz.tomatoclock
+package com.hxlxz.tomatoclock
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -22,7 +22,9 @@ class SettingsDataStore(private val context: Context) {
         
         // Reminder Settings
         val ALERT_MODE = intPreferencesKey("alert_mode") // 0: Sound+Vib, 1: Sound, 2: Vib, 3: SingleSound, 4: Silent
+        val RINGTONE = intPreferencesKey("ringtone") // 0: Digital, 1: Chime, 2: Soft Synth
         val WAKE_SCREEN = androidx.datastore.preferences.core.booleanPreferencesKey("wake_screen")
+        val FLASH_SCREEN = androidx.datastore.preferences.core.booleanPreferencesKey("flash_screen")
         
         // Auto Transition Settings
         val AUTO_START_BREAK = androidx.datastore.preferences.core.booleanPreferencesKey("auto_start_break")
@@ -53,8 +55,16 @@ class SettingsDataStore(private val context: Context) {
         preferences[ALERT_MODE] ?: 0 // Default to Sound + Vibrate
     }
     
+    val ringtoneFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[RINGTONE] ?: 1 // Default to Chime
+    }
+    
     val wakeScreenFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[WAKE_SCREEN] ?: true // Default to waking up screen
+    }
+    
+    val flashScreenFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[FLASH_SCREEN] ?: true // Default to flashing screen
     }
     
     val autoStartBreakFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
@@ -101,9 +111,21 @@ class SettingsDataStore(private val context: Context) {
         }
     }
     
+    suspend fun saveRingtone(ringtone: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[RINGTONE] = ringtone
+        }
+    }
+    
     suspend fun saveWakeScreen(wake: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[WAKE_SCREEN] = wake
+        }
+    }
+    
+    suspend fun saveFlashScreen(flash: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[FLASH_SCREEN] = flash
         }
     }
     

@@ -21,6 +21,9 @@ class SettingsViewModel @Inject constructor(
     val autoStartBreakFlow = dataStore.autoStartBreakFlow
     val autoStartFocusFlow = dataStore.autoStartFocusFlow
     val wakeScreenFlow = dataStore.wakeScreenFlow
+    val alertModeFlow = dataStore.alertModeFlow
+    val ringtoneFlow = dataStore.ringtoneFlow
+    val flashScreenFlow = dataStore.flashScreenFlow
 
     fun saveFocusTime(time: Int) = viewModelScope.launch { dataStore.saveFocusTime(time) }
     fun saveShortBreakTime(time: Int) = viewModelScope.launch { dataStore.saveShortBreakTime(time) }
@@ -31,4 +34,7 @@ class SettingsViewModel @Inject constructor(
     fun saveAutoStartBreak(autoStart: Boolean) = viewModelScope.launch { dataStore.saveAutoStartBreak(autoStart) }
     fun saveAutoStartFocus(autoStart: Boolean) = viewModelScope.launch { dataStore.saveAutoStartFocus(autoStart) }
     fun saveWakeScreen(wake: Boolean) = viewModelScope.launch { dataStore.saveWakeScreen(wake) }
+    fun saveAlertMode(mode: Int) = viewModelScope.launch { dataStore.saveAlertMode(mode) }
+    fun saveRingtone(ringtone: Int) = viewModelScope.launch { dataStore.saveRingtone(ringtone) }
+    fun saveFlashScreen(flash: Boolean) = viewModelScope.launch { dataStore.saveFlashScreen(flash) }
 }

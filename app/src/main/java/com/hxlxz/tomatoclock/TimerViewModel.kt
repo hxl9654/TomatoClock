@@ -6,7 +6,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TimerViewModel @Inject constructor(
-    private val repository: TimerRepository
+    private val repository: TimerRepository,
+    private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
     val timerMode = repository.timerMode
@@ -15,6 +16,8 @@ class TimerViewModel @Inject constructor(
     val totalTimeInSeconds = repository.totalTimeInSeconds
     val currentCycle = repository.currentCycle
     val totalCycles = repository.totalCycles
+    
+    val flashScreen = settingsDataStore.flashScreenFlow
 
     fun startTimer() = repository.startTimer()
     fun pauseTimer() = repository.pauseTimer()

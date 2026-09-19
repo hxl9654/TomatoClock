@@ -3,8 +3,11 @@ package com.hxlxz.tomatoclock
 import app.cash.turbine.test
 import io.mockk.coEvery
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import android.os.SystemClock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.flowOf
@@ -29,6 +32,9 @@ class TimerRepositoryTest {
 
     @Before
     fun setup() {
+        mockkStatic(SystemClock::class)
+        io.mockk.every { SystemClock.elapsedRealtime() } answers { testDispatcher.scheduler.currentTime }
+
         Dispatchers.setMain(testDispatcher)
         mockDataStore = mockk(relaxed = true)
 
@@ -49,6 +55,7 @@ class TimerRepositoryTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkStatic(SystemClock::class)
     }
 
     @Test

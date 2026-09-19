@@ -35,6 +35,7 @@ class TimerScreenLocalTest {
         every { viewModel.totalTimeInSeconds } returns MutableStateFlow(25 * 60L)
         every { viewModel.currentCycle } returns MutableStateFlow(1)
         every { viewModel.totalCycles } returns MutableStateFlow(4)
+        every { viewModel.flashScreen } returns MutableStateFlow(false)
 
         composeTestRule.setContent {
             TimerScreen(onNavigateToSettings = {}, viewModel = viewModel)
@@ -64,6 +65,7 @@ class TimerScreenLocalTest {
         every { viewModel.totalTimeInSeconds } returns MutableStateFlow(25 * 60L)
         every { viewModel.currentCycle } returns MutableStateFlow(1)
         every { viewModel.totalCycles } returns MutableStateFlow(4)
+        every { viewModel.flashScreen } returns MutableStateFlow(false)
 
         composeTestRule.setContent {
             TimerScreen(onNavigateToSettings = {}, viewModel = viewModel)
@@ -88,6 +90,7 @@ class TimerScreenLocalTest {
         every { viewModel.totalTimeInSeconds } returns MutableStateFlow(25 * 60L)
         every { viewModel.currentCycle } returns MutableStateFlow(1)
         every { viewModel.totalCycles } returns MutableStateFlow(4)
+        every { viewModel.flashScreen } returns MutableStateFlow(false)
 
         composeTestRule.setContent {
             TimerScreen(onNavigateToSettings = {}, viewModel = viewModel)

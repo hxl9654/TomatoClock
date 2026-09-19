@@ -1,12 +1,14 @@
 package com.hxlxz.tomatoclock
 
+import android.os.SystemClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,14 +38,26 @@ class TimerRepository @Inject constructor(
     private val _totalCycles = MutableStateFlow(4)
     val totalCycles: StateFlow<Int> = _totalCycles.asStateFlow()
 
+    // 缓存所有设置配置，避免在使用时产生挂起 (blocking IO equivalent for DataStore)
+    private val focusTimeMin = settingsDataStore.focusTimeFlow.stateIn(scope, SharingStarted.Eagerly, 25)
+    private val shortBreakTimeMin = settingsDataStore.shortBreakTimeFlow.stateIn(scope, SharingStarted.Eagerly, 5)
+    private val longBreakTimeMin = settingsDataStore.longBreakTimeFlow.stateIn(scope, SharingStarted.Eagerly, 15)
+    private val snoozeTimeMin = settingsDataStore.snoozeTimeFlow.stateIn(scope, SharingStarted.Eagerly, 5)
+    private val autoStartBreak = settingsDataStore.autoStartBreakFlow.stateIn(scope, SharingStarted.Eagerly, false)
+    private val autoStartFocus = settingsDataStore.autoStartFocusFlow.stateIn(scope, SharingStarted.Eagerly, false)
+
     private var timerJob: Job? = null
+    
+    // Time Anchoring: stores the target absolute time
+    private var targetEndTimeMs: Long = 0L
+    private var pausedTimeRemainingSeconds: Long = 0L
 
     init {
         // 持续监听专注时长设置：计时器空闲时立即更新首页显示
         scope.launch {
-            settingsDataStore.focusTimeFlow.collect { focusTimeMin ->
+            focusTimeMin.collect { focusTime ->
                 if (_timerState.value == TimerState.IDLE) {
-                    val seconds = focusTimeMin * timeConfig.multiplier
+                    val seconds = focusTime * timeConfig.multiplier
                     _timeRemaining.value = seconds
                     _totalTimeInSeconds.value = seconds
                 }
@@ -62,106 +76,103 @@ class TimerRepository @Inject constructor(
         if (_timerState.value == TimerState.RUNNING) return
 
         if (_timerState.value == TimerState.PAUSED) {
-            // Resume from where we left off, no need to reset time
-            startCountdown()
+            // Resume from where we left off
+            startCountdown(pausedTimeRemainingSeconds)
         } else {
             // IDLE or FINISHED: reset time to full duration for current mode
-            scope.launch {
-                val initialTime = getInitialTimeForMode(_timerMode.value)
-                _timeRemaining.value = initialTime
-                _totalTimeInSeconds.value = initialTime
-                startCountdown()
-            }
+            val initialTime = getInitialTimeForMode(_timerMode.value)
+            _totalTimeInSeconds.value = initialTime
+            startCountdown(initialTime)
         }
     }
 
-    private fun startCountdown() {
+    private fun startCountdown(durationSeconds: Long) {
         _timerState.value = TimerState.RUNNING
+        targetEndTimeMs = SystemClock.elapsedRealtime() + (durationSeconds * 1000L)
+        _timeRemaining.value = durationSeconds
+        
         timerJob?.cancel()
         timerJob = scope.launch {
-            while (_timeRemaining.value > 0) {
-                delay(1000)
-                _timeRemaining.value -= 1
+            while (true) {
+                val now = SystemClock.elapsedRealtime()
+                val remainingMs = targetEndTimeMs - now
+                if (remainingMs <= 0) {
+                    _timeRemaining.value = 0
+                    onTimerFinished()
+                    break
+                }
+                // 使用 ceiling 确保不到最后一秒不显示 0
+                _timeRemaining.value = (remainingMs + 999L) / 1000L 
+                delay(200) // update UI frequently enough, no drift because of absolute time anchor
             }
-            onTimerFinished()
         }
     }
 
     fun pauseTimer() {
         timerJob?.cancel()
+        pausedTimeRemainingSeconds = _timeRemaining.value
         _timerState.value = TimerState.PAUSED
     }
 
     fun stopTimer() {
         timerJob?.cancel()
         _timerState.value = TimerState.IDLE
-        scope.launch {
-            _timerMode.value = TimerMode.FOCUS
-            _currentCycle.value = 1
-            val initialTime = getInitialTimeForMode(TimerMode.FOCUS)
-            _timeRemaining.value = initialTime
-            _totalTimeInSeconds.value = initialTime
-        }
+        _timerMode.value = TimerMode.FOCUS
+        _currentCycle.value = 1
+        
+        val initialTime = getInitialTimeForMode(TimerMode.FOCUS)
+        _timeRemaining.value = initialTime
+        _totalTimeInSeconds.value = initialTime
     }
 
-    private suspend fun onTimerFinished() {
+    private fun onTimerFinished() {
         _timerState.value = TimerState.FINISHED
-        // Trigger sound/vibration/notification here via Service or Event
+        // The AlarmPlayer logic will be handled by TimerService reacting to state change
         
-        val autoStartBreak = settingsDataStore.autoStartBreakFlow.first()
-        val autoStartFocus = settingsDataStore.autoStartFocusFlow.first()
+        val autoBreak = autoStartBreak.value
+        val autoFocus = autoStartFocus.value
         
-        if (_timerMode.value == TimerMode.FOCUS && autoStartBreak) {
+        if (_timerMode.value == TimerMode.FOCUS && autoBreak) {
             nextPhase()
-        } else if (_timerMode.value != TimerMode.FOCUS && autoStartFocus) {
+        } else if (_timerMode.value != TimerMode.FOCUS && autoFocus) {
             nextPhase()
         }
     }
 
     fun nextPhase() {
-        scope.launch {
-            val cycles = settingsDataStore.cyclesFlow.first()
-            _totalCycles.value = cycles
-
-            when (_timerMode.value) {
-                TimerMode.FOCUS -> {
-                    if (_currentCycle.value >= cycles) {
-                        _timerMode.value = TimerMode.LONG_BREAK
-                    } else {
-                        _timerMode.value = TimerMode.SHORT_BREAK
-                    }
-                }
-                TimerMode.SHORT_BREAK -> {
-                    _timerMode.value = TimerMode.FOCUS
-                    _currentCycle.value += 1
-                }
-                TimerMode.LONG_BREAK -> {
-                    _timerMode.value = TimerMode.FOCUS
-                    _currentCycle.value = 1
+        when (_timerMode.value) {
+            TimerMode.FOCUS -> {
+                if (_currentCycle.value >= _totalCycles.value) {
+                    _timerMode.value = TimerMode.LONG_BREAK
+                } else {
+                    _timerMode.value = TimerMode.SHORT_BREAK
                 }
             }
-            val initialTime = getInitialTimeForMode(_timerMode.value)
-            _timeRemaining.value = initialTime
-            _totalTimeInSeconds.value = initialTime
-            startCountdown()
+            TimerMode.SHORT_BREAK -> {
+                _timerMode.value = TimerMode.FOCUS
+                _currentCycle.value += 1
+            }
+            TimerMode.LONG_BREAK -> {
+                _timerMode.value = TimerMode.FOCUS
+                _currentCycle.value = 1
+            }
         }
+        val initialTime = getInitialTimeForMode(_timerMode.value)
+        _totalTimeInSeconds.value = initialTime
+        startCountdown(initialTime)
     }
 
     fun snooze() {
-        scope.launch {
-            val snoozeMinutes = settingsDataStore.snoozeTimeFlow.first()
-            val snoozeSeconds = snoozeMinutes * timeConfig.multiplier
-            _timeRemaining.value = snoozeSeconds
-            _totalTimeInSeconds.value = snoozeSeconds
-            startCountdown()
-        }
+        val snoozeSeconds = snoozeTimeMin.value * timeConfig.multiplier
+        _totalTimeInSeconds.value = snoozeSeconds
+        startCountdown(snoozeSeconds)
     }
 
-    private suspend fun getInitialTimeForMode(mode: TimerMode): Long {
+    private fun getInitialTimeForMode(mode: TimerMode): Long {
         val minutes = when (mode) {
-            TimerMode.FOCUS -> settingsDataStore.focusTimeFlow.first()
-            TimerMode.SHORT_BREAK -> settingsDataStore.shortBreakTimeFlow.first()
-            TimerMode.LONG_BREAK -> settingsDataStore.longBreakTimeFlow.first()
+            TimerMode.FOCUS -> focusTimeMin.value
+            TimerMode.SHORT_BREAK -> shortBreakTimeMin.value
+            TimerMode.LONG_BREAK -> longBreakTimeMin.value
         }
         return minutes * timeConfig.multiplier
     }

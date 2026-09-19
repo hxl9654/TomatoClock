@@ -2,6 +2,7 @@ package com.hxlxz.tomatoclock.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.Canvas
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -14,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hxlxz.tomatoclock.R
@@ -33,9 +35,22 @@ fun TimerScreen(
     val totalTime by viewModel.totalTimeInSeconds.collectAsStateWithLifecycle()
     val currentCycle by viewModel.currentCycle.collectAsStateWithLifecycle()
     val totalCycles by viewModel.totalCycles.collectAsStateWithLifecycle()
+    val flashScreen by viewModel.flashScreen.collectAsStateWithLifecycle(initialValue = true)
 
-    // Assuming we fetch total cycles from a higher level or just hardcode for demo,
-    // but in a real app we'd fetch it from ViewModel. For now just show current.
+    val infiniteTransition = rememberInfiniteTransition(label = "flash")
+    val alphaAnim = if (timerState == TimerState.FINISHED && flashScreen) {
+        infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 0.1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(800),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "flashAlpha"
+        ).value
+    } else {
+        1f
+    }
     
     val minutes = timeRemaining / 60
     val seconds = timeRemaining % 60
@@ -99,28 +114,35 @@ fun TimerScreen(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(300.dp)
             ) {
-                CircularProgressIndicator(
-                    progress = { 1f },
-                    modifier = Modifier.fillMaxSize(),
-                    color = colorPrimary.copy(alpha = 0.2f),
-                    strokeWidth = 12.dp,
-                    strokeCap = StrokeCap.Butt
-                )
-                
-                // Active progress
-                CircularProgressIndicator(
-                    progress = { if (totalTime > 0) timeRemaining.toFloat() / totalTime.toFloat() else 1f },
-                    modifier = Modifier.fillMaxSize(),
-                    color = colorPrimary,
-                    strokeWidth = 12.dp,
-                    strokeCap = StrokeCap.Round
-                )
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    // Background track
+                    drawCircle(
+                        color = colorPrimary.copy(alpha = 0.2f),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 12.dp.toPx())
+                    )
+                    
+                    // Active progress (remaining ratio)
+                    val progress = if (totalTime > 0) timeRemaining.toFloat() / totalTime.toFloat() else 1f
+                    val sweepAngle = 360f * progress
+                    val startAngle = -90f
+                    
+                    drawArc(
+                        color = colorPrimary.copy(alpha = alphaAnim),
+                        startAngle = startAngle,
+                        sweepAngle = sweepAngle,
+                        useCenter = false,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = 12.dp.toPx(), 
+                            cap = StrokeCap.Round
+                        )
+                    )
+                }
 
                 Text(
                     text = timeString,
                     fontSize = 72.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = alphaAnim)
                 )
             }
 

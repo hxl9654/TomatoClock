@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -118,7 +119,7 @@ class TomatoClockE2ETest {
         
         // Find the text field containing "3" (our focus time) and increment it
         // Actually, it's easier to just click back and verify navigation works
-        composeTestRule.onNodeWithContentDescription("Back").performClick()
+        composeTestRule.onNodeWithContentDescription("返回").performClick()
         composeTestRule.waitForIdle()
         
         // Verify we are back on Timer screen
@@ -201,5 +202,60 @@ class TomatoClockE2ETest {
         
         // Because cycles = 2, we should now be in LONG_BREAK
         composeTestRule.onNodeWithText("长休息").assertIsDisplayed()
+    }
+
+    @Test
+    fun testSettingsAlertModeModification() {
+        composeTestRule.waitForIdle()
+
+        // Go to settings
+        composeTestRule.onNodeWithContentDescription("设置").performClick()
+        composeTestRule.waitForIdle()
+        
+        // Find Alert mode label
+        composeTestRule.onNodeWithText("提醒模式").performScrollTo().assertIsDisplayed()
+        
+        // Click the dropdown (the default value should be 闹铃 + 震动)
+        composeTestRule.onNodeWithText("闹铃 + 震动").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        
+        // Select "仅闹铃"
+        composeTestRule.onNodeWithText("仅闹铃").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        
+        // Verify it was updated
+        composeTestRule.onNodeWithText("仅闹铃").performScrollTo().assertIsDisplayed()
+        
+        // Go back
+        composeTestRule.onNodeWithContentDescription("返回").performClick()
+        composeTestRule.waitForIdle()
+    }
+    
+    @Test
+    fun testSettingsFlashAndRingtoneModification() {
+        composeTestRule.waitForIdle()
+
+        // Go to settings
+        composeTestRule.onNodeWithContentDescription("设置").performClick()
+        composeTestRule.waitForIdle()
+        
+        // Find Ringtone label
+        composeTestRule.onNodeWithText("提示音选择").performScrollTo().assertIsDisplayed()
+        
+        // Change Ringtone from default (清脆风铃) to (柔和合成音)
+        composeTestRule.onNodeWithText("清脆风铃").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("柔和合成音").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("柔和合成音").performScrollTo().assertIsDisplayed()
+        
+        // Toggle Flash Screen switch
+        composeTestRule.onNodeWithText("结束时界面呼吸闪烁").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("结束时界面呼吸闪烁").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        
+        // Go back
+        composeTestRule.onNodeWithContentDescription("返回").performClick()
+        composeTestRule.waitForIdle()
     }
 }

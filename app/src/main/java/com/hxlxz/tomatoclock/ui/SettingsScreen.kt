@@ -36,6 +36,9 @@ fun SettingsScreen(
     val autoStartBreak by viewModel.autoStartBreakFlow.collectAsStateWithLifecycle(initialValue = false)
     val autoStartFocus by viewModel.autoStartFocusFlow.collectAsStateWithLifecycle(initialValue = false)
     val wakeScreen by viewModel.wakeScreenFlow.collectAsStateWithLifecycle(initialValue = true)
+    val flashScreen by viewModel.flashScreenFlow.collectAsStateWithLifecycle(initialValue = true)
+    val alertMode by viewModel.alertModeFlow.collectAsStateWithLifecycle(initialValue = 0)
+    val ringtone by viewModel.ringtoneFlow.collectAsStateWithLifecycle(initialValue = 1)
 
     Scaffold(
         topBar = {
@@ -122,6 +125,40 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_wake_screen),
                 checked = wakeScreen,
                 onCheckedChange = { viewModel.saveWakeScreen(it) }
+            )
+            
+            SwitchSetting(
+                label = stringResource(R.string.settings_flash_screen),
+                checked = flashScreen,
+                onCheckedChange = { viewModel.saveFlashScreen(it) }
+            )
+
+            val alertModeOptions = listOf(
+                stringResource(R.string.alert_mode_sound_vib),
+                stringResource(R.string.alert_mode_sound),
+                stringResource(R.string.alert_mode_vib),
+                stringResource(R.string.alert_mode_single_sound),
+                stringResource(R.string.alert_mode_silent)
+            )
+            
+            DropdownSetting(
+                label = stringResource(R.string.settings_alert_mode),
+                options = alertModeOptions,
+                selectedIndex = alertMode,
+                onOptionSelected = { viewModel.saveAlertMode(it) }
+            )
+            
+            val ringtoneOptions = listOf(
+                stringResource(R.string.ringtone_digital),
+                stringResource(R.string.ringtone_chime),
+                stringResource(R.string.ringtone_soft)
+            )
+            
+            DropdownSetting(
+                label = stringResource(R.string.settings_ringtone),
+                options = ringtoneOptions,
+                selectedIndex = ringtone,
+                onOptionSelected = { viewModel.saveRingtone(it) }
             )
         }
     }
@@ -211,11 +248,13 @@ private fun RepeatableIconButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
+    val currentOnClick by rememberUpdatedState(onClick)
+
     LaunchedEffect(isPressed) {
         if (isPressed) {
             delay(500L) // 长按触发前的初始等待
             while (isPressed) {
-                onClick()
+                currentOnClick()
                 delay(80L) // 连续触发间隔
             }
         }
@@ -257,5 +296,56 @@ fun SwitchSetting(
             checked = checked,
             onCheckedChange = onCheckedChange
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DropdownSetting(
+    label: String,
+    options: List<String>,
+    selectedIndex: Int,
+    onOptionSelected: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        
+        Box(modifier = Modifier.weight(1.5f)) {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it }
+            ) {
+                OutlinedTextField(
+                    value = options.getOrNull(selectedIndex) ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    modifier = Modifier.menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    options.forEachIndexed { index, selectionOption ->
+                        DropdownMenuItem(
+                            text = { Text(selectionOption) },
+                            onClick = {
+                                onOptionSelected(index)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
     }
 }

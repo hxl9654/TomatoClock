@@ -25,10 +25,13 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
 *   **设置实时同步**：设置修改后，首页在计时器空闲状态下立即更新显示。
 *   **循环次数**：设定在进入长休息前需要完成的“专注”循环次数。
 *   **推迟提醒时长**：设定点击推迟提醒增加的时间。
-*   **行为偏好**：
+*   **行为偏好与提醒**：
     *   自动进入休息开关
     *   自动进入专注开关
     *   倒计时结束时点亮屏幕开关 (Wake Screen)
+    *   倒计时结束时界面呼吸闪烁开关 (Breathing UI Flash)
+    *   提醒模式选择：闹铃+震动、仅闹铃、仅震动、单次提示音、静音
+    *   提示音选择：电子滴答、清脆风铃、柔和合成音
 
 ## 3. UI/UX 规范 (UI/UX Guidelines)
 *   必须为**纯中文界面 (Chinese UI Only)**。
@@ -47,7 +50,9 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
 *   必须使用 **MVVM 架构** 及 **Unidirectional Data Flow (单向数据流)**。
 *   必须使用 **Hilt** 进行依赖注入。
 *   数据存储层必须使用 **Jetpack DataStore (Preferences)**。
-*   核心计时逻辑必须位于 **TimerRepository**，ViewModel 只做状态转发，Activity 保持轻量。
+*   核心计时逻辑必须位于 **TimerRepository**，通过 `SystemClock.elapsedRealtime()` 锚定时间，解决休眠带来的时间漂移。
+*   后台执行必须基于 **Foreground Service (前台服务)** 配合 `PowerManager.PARTIAL_WAKE_LOCK`，保障应用切入后台或锁屏时倒计时正常运行。
+*   铃声及震动等硬件副作用应隔离至独立的 `AlarmPlayer` 模块单例中。
 *   禁止使用 `Thread.sleep` 阻塞主线程；状态更新通过 `StateFlow`。
 
 ## 5. 质量保证 (Quality Assurance)

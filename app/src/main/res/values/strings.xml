@@ -41,7 +41,18 @@
     <string name="settings_auto_break">自动开始休息</string>
     <string name="settings_auto_focus">自动开始专注</string>
     <string name="settings_wake_screen">倒计时结束时点亮屏幕</string>
+    <string name="settings_flash_screen">结束时界面呼吸闪烁</string>
+    <string name="settings_alert_mode">提醒模式</string>
+    <string name="settings_ringtone">提示音选择</string>
+    <string name="alert_mode_sound_vib">闹铃 + 震动</string>
+    <string name="alert_mode_sound">仅闹铃</string>
+    <string name="alert_mode_vib">仅震动</string>
+    <string name="alert_mode_single_sound">单次提示音</string>
+    <string name="alert_mode_silent">静音</string>    
     
+    <string name="ringtone_digital">经典电子滴答</string>
+    <string name="ringtone_chime">清脆风铃</string>
+    <string name="ringtone_soft">柔和合成音</string>
     <!-- 通知渠道 -->
     <string name="notification_channel_name">番茄钟通知</string>
     <string name="notification_channel_desc">显示计时状态及结束提醒</string>
