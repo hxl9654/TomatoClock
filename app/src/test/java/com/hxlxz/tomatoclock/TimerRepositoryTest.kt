@@ -28,6 +28,7 @@ class TimerRepositoryTest {
 
     private lateinit var repository: TimerRepository
     private lateinit var mockDataStore: SettingsDataStore
+    private lateinit var mockAlarmScheduler: AlarmScheduler
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
@@ -37,6 +38,7 @@ class TimerRepositoryTest {
 
         Dispatchers.setMain(testDispatcher)
         mockDataStore = mockk(relaxed = true)
+        mockAlarmScheduler = mockk(relaxed = true)
 
         // Mock default flows
         coEvery { mockDataStore.focusTimeFlow } returns flowOf(25)
@@ -49,7 +51,7 @@ class TimerRepositoryTest {
 
         val timeConfig = TimeConfig()
         val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
-        repository = TimerRepository(mockDataStore, timeConfig, testScope)
+        repository = TimerRepository(mockDataStore, timeConfig, testScope, mockAlarmScheduler)
     }
 
     @After
@@ -171,7 +173,7 @@ class TimerRepositoryTest {
     @Test
     fun `onTimerFinished auto-starts next phase when enabled`() = runTest(testDispatcher) {
         coEvery { mockDataStore.autoStartBreakFlow } returns flowOf(true)
-        val repoWithAutoStart = TimerRepository(mockDataStore, TimeConfig(), CoroutineScope(SupervisorJob() + testDispatcher))
+        val repoWithAutoStart = TimerRepository(mockDataStore, TimeConfig(), CoroutineScope(SupervisorJob() + testDispatcher), mockAlarmScheduler)
         testScheduler.advanceUntilIdle()
         
         repoWithAutoStart.startTimer()
@@ -276,9 +278,11 @@ class TimerRepositoryTest {
         repository.startTimer()
         testScheduler.runCurrent()
         assertEquals(TimerState.RUNNING, repository.timerState.value)
+        io.mockk.verify { mockAlarmScheduler.scheduleAlarm(any()) }
 
         repository.stopTimer()
         testScheduler.advanceUntilIdle()
+        io.mockk.verify { mockAlarmScheduler.cancelAlarm() }
 
         assertEquals(TimerState.IDLE, repository.timerState.value)
         assertEquals(TimerMode.FOCUS, repository.timerMode.value)
@@ -295,7 +299,7 @@ class TimerRepositoryTest {
         coEvery { mockDataStore.focusTimeFlow } returns focusFlow
 
         val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
-        val repo = TimerRepository(mockDataStore, TimeConfig(), testScope)
+        val repo = TimerRepository(mockDataStore, TimeConfig(), testScope, mockAlarmScheduler)
         testScheduler.advanceUntilIdle()
 
         // 初始值 25 分钟
@@ -316,13 +320,15 @@ class TimerRepositoryTest {
         coEvery { mockDataStore.focusTimeFlow } returns focusFlow
 
         val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
-        val repo = TimerRepository(mockDataStore, TimeConfig(), testScope)
+        val repo = TimerRepository(mockDataStore, TimeConfig(), testScope, mockAlarmScheduler)
         testScheduler.advanceUntilIdle()
 
         // 启动计时
         repo.startTimer()
         testScheduler.runCurrent()
         assertEquals(TimerState.RUNNING, repo.timerState.value)
+        
+        io.mockk.verify { mockAlarmScheduler.scheduleAlarm(any()) }
 
         val timeBeforeChange = repo.timeRemaining.value
 
@@ -346,7 +352,7 @@ class TimerRepositoryTest {
         coEvery { mockDataStore.cyclesFlow } returns cyclesFlow
 
         val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
-        val repo = TimerRepository(mockDataStore, TimeConfig(), testScope)
+        val repo = TimerRepository(mockDataStore, TimeConfig(), testScope, mockAlarmScheduler)
         testScheduler.advanceUntilIdle()
 
         assertEquals(4, repo.totalCycles.value)

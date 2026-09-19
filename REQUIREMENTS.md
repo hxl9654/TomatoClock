@@ -50,8 +50,8 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
 *   必须使用 **MVVM 架构** 及 **Unidirectional Data Flow (单向数据流)**。
 *   必须使用 **Hilt** 进行依赖注入。
 *   数据存储层必须使用 **Jetpack DataStore (Preferences)**。
-*   核心计时逻辑必须位于 **TimerRepository**，通过 `SystemClock.elapsedRealtime()` 锚定时间，解决休眠带来的时间漂移。
-*   后台执行必须基于 **Foreground Service (前台服务)** 配合 `PowerManager.PARTIAL_WAKE_LOCK`，保障应用切入后台或锁屏时倒计时正常运行。
+*   核心计时逻辑必须位于 **TimerRepository**，通过系统级别的闹钟调度（如 `AlarmScheduler` 接口）锚定时间，解决休眠带来的时间漂移。
+*   后台执行必须基于 **系统闹钟服务 (AlarmManager.setAlarmClock)** 配合 **全屏意图 (FullScreenIntent)**，彻底抛弃不可靠的 `PowerManager.PARTIAL_WAKE_LOCK`，保障应用切入后台或深度锁屏息屏时倒计时正常运行和强制唤醒亮屏。
 *   铃声及震动等硬件副作用应隔离至独立的 `AlarmPlayer` 模块单例中。
 *   禁止使用 `Thread.sleep` 阻塞主线程；状态更新通过 `StateFlow`。
 

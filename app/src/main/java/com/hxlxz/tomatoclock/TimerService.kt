@@ -59,9 +59,10 @@ class TimerService : Service() {
         combine(
             repository.timerState,
             repository.timeRemaining,
-            repository.timerMode
-        ) { state, time, mode ->
-            updateNotification(state, time, mode)
+            repository.timerMode,
+            settingsDataStore.wakeScreenFlow
+        ) { state, time, mode, wakeScreen ->
+            updateNotification(state, time, mode, wakeScreen)
         }.launchIn(serviceScope)
 
         // Handle State Side Effects (WakeLocks, Alarms)
@@ -80,16 +81,10 @@ class TimerService : Service() {
                 // Read latest settings
                 val alertMode = AlertMode.fromInt(settingsDataStore.alertModeFlow.first())
                 val ringtone = Ringtone.fromInt(settingsDataStore.ringtoneFlow.first())
-                val wakeScreen = settingsDataStore.wakeScreenFlow.first()
-                
-                if (wakeScreen) {
-                    wakeUpScreen()
-                }
                 
                 alarmPlayer.play(alertMode, ringtone)
                 
-                // Release the persistent partial wake lock since we are no longer running,
-                // but wakeUpScreen will handle keeping it bright for a moment.
+                // Release the persistent partial wake lock since we are no longer running.
                 releaseWakeLock()
             }
             TimerState.PAUSED, TimerState.IDLE -> {
@@ -120,16 +115,6 @@ class TimerService : Service() {
         partialWakeLock = null
     }
 
-    private fun wakeUpScreen() {
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        @Suppress("DEPRECATION")
-        val wakeLock = powerManager.newWakeLock(
-            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-            "TomatoClock::WakeScreen"
-        )
-        wakeLock.acquire(5000) // 亮屏 5 秒
-    }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.action?.let { action ->
             when (action) {
@@ -145,7 +130,8 @@ class TimerService : Service() {
             val initialNotification = buildNotification(
                 repository.timerState.value,
                 repository.timeRemaining.value,
-                repository.timerMode.value
+                repository.timerMode.value,
+                false
             )
             startForeground(NOTIFICATION_ID, initialNotification)
             isForeground = true
@@ -154,13 +140,13 @@ class TimerService : Service() {
         return START_STICKY
     }
 
-    private fun updateNotification(state: TimerState, time: Long, mode: TimerMode) {
+    private fun updateNotification(state: TimerState, time: Long, mode: TimerMode, wakeScreen: Boolean) {
         if (!isForeground) return
         val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.notify(NOTIFICATION_ID, buildNotification(state, time, mode))
+        notificationManager.notify(NOTIFICATION_ID, buildNotification(state, time, mode, wakeScreen))
     }
 
-    private fun buildNotification(state: TimerState, time: Long, mode: TimerMode): Notification {
+    private fun buildNotification(state: TimerState, time: Long, mode: TimerMode, wakeScreen: Boolean): Notification {
         val title = when (mode) {
             TimerMode.FOCUS -> getString(R.string.state_focus)
             TimerMode.SHORT_BREAK -> getString(R.string.state_short_break)
@@ -202,6 +188,10 @@ class TimerService : Service() {
             this, 0, mainActivityIntent, PendingIntent.FLAG_IMMUTABLE
         )
         builder.setContentIntent(pendingMainActivity)
+
+        if (state == TimerState.FINISHED && wakeScreen) {
+            builder.setFullScreenIntent(pendingMainActivity, true)
+        }
 
         when (state) {
             TimerState.RUNNING -> {

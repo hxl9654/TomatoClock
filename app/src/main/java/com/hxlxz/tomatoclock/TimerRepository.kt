@@ -17,7 +17,8 @@ import javax.inject.Singleton
 class TimerRepository @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val timeConfig: TimeConfig,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val alarmScheduler: AlarmScheduler
 ) {
 
     private val _timerMode = MutableStateFlow(TimerMode.FOCUS)
@@ -91,6 +92,8 @@ class TimerRepository @Inject constructor(
         targetEndTimeMs = SystemClock.elapsedRealtime() + (durationSeconds * 1000L)
         _timeRemaining.value = durationSeconds
         
+        alarmScheduler.scheduleAlarm(targetEndTimeMs)
+        
         timerJob?.cancel()
         timerJob = scope.launch {
             while (true) {
@@ -98,6 +101,7 @@ class TimerRepository @Inject constructor(
                 val remainingMs = targetEndTimeMs - now
                 if (remainingMs <= 0) {
                     _timeRemaining.value = 0
+                    alarmScheduler.cancelAlarm()
                     onTimerFinished()
                     break
                 }
@@ -110,12 +114,14 @@ class TimerRepository @Inject constructor(
 
     fun pauseTimer() {
         timerJob?.cancel()
+        alarmScheduler.cancelAlarm()
         pausedTimeRemainingSeconds = _timeRemaining.value
         _timerState.value = TimerState.PAUSED
     }
 
     fun stopTimer() {
         timerJob?.cancel()
+        alarmScheduler.cancelAlarm()
         _timerState.value = TimerState.IDLE
         _timerMode.value = TimerMode.FOCUS
         _currentCycle.value = 1
@@ -126,6 +132,7 @@ class TimerRepository @Inject constructor(
     }
 
     private fun onTimerFinished() {
+        alarmScheduler.cancelAlarm()
         _timerState.value = TimerState.FINISHED
         // The AlarmPlayer logic will be handled by TimerService reacting to state change
         
@@ -175,5 +182,14 @@ class TimerRepository @Inject constructor(
             TimerMode.LONG_BREAK -> longBreakTimeMin.value
         }
         return minutes * timeConfig.multiplier
+    }
+
+    fun forceFinishTimer() {
+        if (_timerState.value == TimerState.RUNNING) {
+            timerJob?.cancel()
+            alarmScheduler.cancelAlarm()
+            _timeRemaining.value = 0
+            onTimerFinished()
+        }
     }
 }
