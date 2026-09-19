@@ -22,6 +22,7 @@ A modern Android Pomodoro Timer application built with Kotlin, Jetpack Compose, 
 *   **Concurrency**: Kotlin Coroutines & Flow
 *   **Testing**:
     *   Unit Tests: JUnit 4, MockK, Coroutines Test
+    *   Snapshot Tests: Roborazzi
     *   E2E/Instrumented Tests: Compose UI Test, Hilt Android Testing
 
 ## 🧪 Testing / 测试

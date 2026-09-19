@@ -2,19 +2,18 @@ package com.hxlxz.tomatoclock
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.captureToImage
+import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
+import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import com.hxlxz.tomatoclock.ui.TimerScreen
-import com.hxlxz.tomatoclock.TimerViewModel
-import io.mockk.mockk
+import com.hxlxz.tomatoclock.ui.TimerScreenContent
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = RobolectricDeviceQualifiers.Pixel5)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class TimerScreenVrtTest {
 
@@ -23,10 +22,26 @@ class TimerScreenVrtTest {
 
     @Test
     fun testTimerScreenIdleSnapshot() {
-        // TODO: Replace with Roborazzi once plugin is configured
-        // composeTestRule.setContent {
-        //     TimerScreen(onNavigateToSettings = {}, viewModel = mockk(relaxed = true))
-        // }
-        // composeTestRule.onRoot().captureToImage() // Verify rendering doesn't crash
+        composeTestRule.setContent {
+            com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+                TimerScreenContent(
+                    timerMode = TimerMode.FOCUS,
+                    timerState = TimerState.IDLE,
+                    timeRemaining = 1500L,
+                    totalTime = 1500L,
+                    currentCycle = 1,
+                    totalCycles = 4,
+                    flashScreen = false,
+                    onNavigateToSettings = {},
+                    onStart = {},
+                    onPause = {},
+                    onStop = {},
+                    onNextPhase = {},
+                    onSnooze = {}
+                )
+            }
+        }
+        
+        composeTestRule.onRoot().captureRoboImage()
     }
 }

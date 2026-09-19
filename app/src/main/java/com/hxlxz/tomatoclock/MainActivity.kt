@@ -20,6 +20,7 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
+import android.util.Log
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -30,6 +31,7 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (!isGranted) {
+            Log.w("MainActivity", "POST_NOTIFICATIONS permission denied by user. Foreground service may operate with degraded experience.")
             Toast.makeText(this, "需要通知权限以在后台运行倒计时", Toast.LENGTH_LONG).show()
         }
     }
@@ -69,7 +71,11 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         // Start Foreground Service to ensure it runs
-        val serviceIntent = Intent(this, TimerService::class.java)
-        startService(serviceIntent)
+        try {
+            val serviceIntent = Intent(this, TimerService::class.java)
+            startService(serviceIntent)
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to start TimerService", e)
+        }
     }
 }

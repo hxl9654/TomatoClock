@@ -37,6 +37,40 @@ fun TimerScreen(
     val totalCycles by viewModel.totalCycles.collectAsStateWithLifecycle()
     val flashScreen by viewModel.flashScreen.collectAsStateWithLifecycle(initialValue = true)
 
+    TimerScreenContent(
+        timerMode = timerMode,
+        timerState = timerState,
+        timeRemaining = timeRemaining,
+        totalTime = totalTime,
+        currentCycle = currentCycle,
+        totalCycles = totalCycles,
+        flashScreen = flashScreen,
+        onNavigateToSettings = onNavigateToSettings,
+        onStart = { viewModel.startTimer() },
+        onPause = { viewModel.pauseTimer() },
+        onStop = { viewModel.stopTimer() },
+        onNextPhase = { viewModel.nextPhase() },
+        onSnooze = { viewModel.snooze() }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimerScreenContent(
+    timerMode: TimerMode,
+    timerState: TimerState,
+    timeRemaining: Long,
+    totalTime: Long,
+    currentCycle: Int,
+    totalCycles: Int,
+    flashScreen: Boolean,
+    onNavigateToSettings: () -> Unit,
+    onStart: () -> Unit,
+    onPause: () -> Unit,
+    onStop: () -> Unit,
+    onNextPhase: () -> Unit,
+    onSnooze: () -> Unit
+) {
     val infiniteTransition = rememberInfiniteTransition(label = "flash")
     val alphaAnim = if (timerState == TimerState.FINISHED && flashScreen) {
         infiniteTransition.animateFloat(
@@ -156,7 +190,7 @@ fun TimerScreen(
                 when (timerState) {
                     TimerState.IDLE -> {
                         Button(
-                            onClick = { viewModel.startTimer() },
+                            onClick = onStart,
                             modifier = Modifier.size(80.dp),
                             shape = CircleShape,
                             colors = ButtonDefaults.buttonColors(containerColor = colorPrimary)
@@ -166,7 +200,7 @@ fun TimerScreen(
                     }
                     TimerState.RUNNING -> {
                         Button(
-                            onClick = { viewModel.pauseTimer() },
+                            onClick = onPause,
                             modifier = Modifier.size(80.dp),
                             shape = CircleShape,
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
@@ -175,7 +209,7 @@ fun TimerScreen(
                         }
                         
                         OutlinedButton(
-                            onClick = { viewModel.stopTimer() },
+                            onClick = onStop,
                             modifier = Modifier.size(80.dp),
                             shape = CircleShape
                         ) {
@@ -184,7 +218,7 @@ fun TimerScreen(
                     }
                     TimerState.PAUSED -> {
                         Button(
-                            onClick = { viewModel.startTimer() },
+                            onClick = onStart,
                             modifier = Modifier.size(80.dp),
                             shape = CircleShape,
                             colors = ButtonDefaults.buttonColors(containerColor = colorPrimary)
@@ -193,7 +227,7 @@ fun TimerScreen(
                         }
                         
                         OutlinedButton(
-                            onClick = { viewModel.stopTimer() },
+                            onClick = onStop,
                             modifier = Modifier.size(80.dp),
                             shape = CircleShape
                         ) {
@@ -202,7 +236,7 @@ fun TimerScreen(
                     }
                     TimerState.FINISHED -> {
                         Button(
-                            onClick = { viewModel.nextPhase() },
+                            onClick = onNextPhase,
                             modifier = Modifier.height(80.dp).padding(horizontal = 16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = colorPrimary)
                         ) {
@@ -210,7 +244,7 @@ fun TimerScreen(
                         }
                         
                         OutlinedButton(
-                            onClick = { viewModel.snooze() },
+                            onClick = onSnooze,
                             modifier = Modifier.height(80.dp).padding(horizontal = 16.dp)
                         ) {
                             Text(stringResource(R.string.action_snooze))
@@ -226,10 +260,20 @@ fun TimerScreen(
 @Composable
 private fun TimerScreenRunningPreview() {
     com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
-        // Preview uses a stub ViewModel via mock flows; for IDE preview only.
-        // Real ViewModel requires Hilt injection, so we inline the screen layout logic via
-        // a dedicated preview composable that mirrors the UI directly.
-        // Currently this preview will show the screen with hiltViewModel() stub behavior.
-        // For true mock previews, consider splitting TimerScreen into stateless + stateful composables.
+        TimerScreenContent(
+            timerMode = TimerMode.FOCUS,
+            timerState = TimerState.RUNNING,
+            timeRemaining = 1200L,
+            totalTime = 1500L,
+            currentCycle = 1,
+            totalCycles = 4,
+            flashScreen = false,
+            onNavigateToSettings = {},
+            onStart = {},
+            onPause = {},
+            onStop = {},
+            onNextPhase = {},
+            onSnooze = {}
+        )
     }
 }

@@ -72,13 +72,10 @@ class TomatoClockE2ETest {
 
     @Test
     fun testFullTimerFlow() {
-        // 1. Wait for UI to settle
         composeTestRule.waitForIdle()
 
         // Verify initial state
         composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
-        // Format of timer when 3 seconds remaining (00:03)
-        // composeTestRule.onNodeWithText("00:03").assertIsDisplayed() // Skipped initial time
 
         // 2. Start the timer
         composeTestRule.onNodeWithText("开始").performClick()
@@ -90,20 +87,15 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("停止").assertIsDisplayed()
 
         // 3. Let the timer run to completion (wait 4 seconds max)
-        // mainClock.advanceTimeBy is not guaranteed to advance real dispatchers on device,
-        // so we wait real time.
         waitUntilTextExists("短休息")
         composeTestRule.waitForIdle()
 
         // 4. Verify it auto-transitioned to Break (since autoStartBreak is true)
-        // Or if it didn't auto start, it would be FINISHED. We configured autoStartBreak=true.
         composeTestRule.onNodeWithText("短休息").assertIsDisplayed()
-        // composeTestRule.onNodeWithText("00:02").assertIsDisplayed() // Skipped
 
         // 5. Test Pause functionality during break
         composeTestRule.onNodeWithText("暂停").performClick()
         composeTestRule.waitForIdle()
-        // composeTestRule.onNodeWithText("已暂停").assertIsDisplayed() // Not displayed in UI
         composeTestRule.onNodeWithText("继续").assertIsDisplayed()
 
         // 6. Test Stop functionality
@@ -125,7 +117,6 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("时长设置（分钟）").assertIsDisplayed()
         
         // Find the text field containing "3" (our focus time) and increment it
-        // Actually, it's easier to just click back and verify navigation works
         composeTestRule.onNodeWithContentDescription("返回").performClick()
         composeTestRule.waitForIdle()
         
@@ -184,9 +175,8 @@ class TomatoClockE2ETest {
         }
         
         composeTestRule.waitForIdle()
-        // Wait a bit to ensure datastore propagation
-        // Datastore sync wait
-        try { composeTestRule.waitUntil(500) { false } } catch(e: Throwable) {}
+        // Wait until datastore propagation reflects in UI (cycles = 2)
+        waitUntilTextExists("第 1 / 2 次循环")
         
         composeTestRule.onNodeWithText("开始").performClick()
         
