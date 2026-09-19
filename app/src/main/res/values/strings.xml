@@ -53,6 +53,8 @@
     <string name="ringtone_digital">经典电子滴答</string>
     <string name="ringtone_chime">清脆风铃</string>
     <string name="ringtone_soft">柔和合成音</string>
+    <string name="ringtone_zen_bowl">禅意颂钵</string>
+    <string name="ringtone_nature_wood">自然木琴</string>
     <!-- 通知渠道 -->
     <string name="notification_channel_name">番茄钟通知</string>
     <string name="notification_channel_desc">显示计时状态及结束提醒</string>

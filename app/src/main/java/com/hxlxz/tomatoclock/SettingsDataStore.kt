@@ -77,31 +77,31 @@ class SettingsDataStore(private val context: Context) {
 
     suspend fun saveFocusTime(minutes: Int) {
         context.dataStore.edit { preferences ->
-            preferences[FOCUS_TIME] = minutes
+            preferences[FOCUS_TIME] = minutes.coerceIn(1, 120)
         }
     }
 
     suspend fun saveShortBreakTime(minutes: Int) {
         context.dataStore.edit { preferences ->
-            preferences[SHORT_BREAK_TIME] = minutes
+            preferences[SHORT_BREAK_TIME] = minutes.coerceIn(1, 60)
         }
     }
 
     suspend fun saveLongBreakTime(minutes: Int) {
         context.dataStore.edit { preferences ->
-            preferences[LONG_BREAK_TIME] = minutes
+            preferences[LONG_BREAK_TIME] = minutes.coerceIn(1, 60)
         }
     }
 
     suspend fun saveCycles(count: Int) {
         context.dataStore.edit { preferences ->
-            preferences[CYCLES] = count
+            preferences[CYCLES] = count.coerceIn(1, 10)
         }
     }
 
     suspend fun saveSnoozeTime(minutes: Int) {
         context.dataStore.edit { preferences ->
-            preferences[SNOOZE_TIME] = minutes
+            preferences[SNOOZE_TIME] = minutes.coerceIn(1, 30)
         }
     }
     

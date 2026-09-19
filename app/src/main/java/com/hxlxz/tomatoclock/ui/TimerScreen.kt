@@ -122,7 +122,7 @@ fun TimerScreen(
                     )
                     
                     // Active progress (remaining ratio)
-                    val progress = if (totalTime > 0) timeRemaining.toFloat() / totalTime.toFloat() else 1f
+                    val progress = if (totalTime > 0) (timeRemaining.toFloat() / totalTime.toFloat()).coerceIn(0f, 1f) else 1f
                     val sweepAngle = 360f * progress
                     val startAngle = -90f
                     

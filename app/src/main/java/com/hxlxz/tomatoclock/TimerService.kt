@@ -78,8 +78,8 @@ class TimerService : Service() {
             }
             TimerState.FINISHED -> {
                 // Read latest settings
-                val alertMode = settingsDataStore.alertModeFlow.first()
-                val ringtone = settingsDataStore.ringtoneFlow.first()
+                val alertMode = AlertMode.fromInt(settingsDataStore.alertModeFlow.first())
+                val ringtone = Ringtone.fromInt(settingsDataStore.ringtoneFlow.first())
                 val wakeScreen = settingsDataStore.wakeScreenFlow.first()
                 
                 if (wakeScreen) {
@@ -106,7 +106,7 @@ class TimerService : Service() {
                 PowerManager.PARTIAL_WAKE_LOCK,
                 "TomatoClock::TimerWakeLock"
             ).apply {
-                acquire(24 * 60 * 60 * 1000L /*24 hours max*/) 
+                acquire(2 * 60 * 60 * 1000L /* 2 hours max */) 
             }
         }
     }

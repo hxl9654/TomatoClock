@@ -99,4 +99,24 @@ class SettingsDataStoreTest {
         dataStore.saveAutoStartFocus(true)
         assertEquals(true, dataStore.autoStartFocusFlow.first())
     }
+
+    @Test
+    fun `save boundary and malformed values`() = runTest {
+        // Test negative and zero bounds (coerceIn 1..120)
+        dataStore.saveFocusTime(-10)
+        assertEquals(1, dataStore.focusTimeFlow.first())
+        
+        dataStore.saveFocusTime(0)
+        assertEquals(1, dataStore.focusTimeFlow.first())
+
+        dataStore.saveFocusTime(150)
+        assertEquals(120, dataStore.focusTimeFlow.first())
+        
+        // Cycles coerceIn 1..10
+        dataStore.saveCycles(0)
+        assertEquals(1, dataStore.cyclesFlow.first())
+        
+        dataStore.saveCycles(100)
+        assertEquals(10, dataStore.cyclesFlow.first())
+    }
 }

@@ -2,6 +2,7 @@ package com.hxlxz.tomatoclock.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hxlxz.tomatoclock.AlarmPlayer
 import com.hxlxz.tomatoclock.SettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -9,7 +10,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val dataStore: SettingsDataStore
+    private val dataStore: SettingsDataStore,
+    private val alarmPlayer: AlarmPlayer
 ) : ViewModel() {
 
     val focusTimeFlow = dataStore.focusTimeFlow
@@ -37,4 +39,8 @@ class SettingsViewModel @Inject constructor(
     fun saveAlertMode(mode: Int) = viewModelScope.launch { dataStore.saveAlertMode(mode) }
     fun saveRingtone(ringtone: Int) = viewModelScope.launch { dataStore.saveRingtone(ringtone) }
     fun saveFlashScreen(flash: Boolean) = viewModelScope.launch { dataStore.saveFlashScreen(flash) }
+    
+    fun previewRingtone(index: Int) {
+        alarmPlayer.preview(index)
+    }
 }

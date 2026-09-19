@@ -83,7 +83,7 @@ fun SettingsScreen(
             NumberInputSetting(
                 label = stringResource(R.string.settings_long_break),
                 value = longBreakTime,
-                valueRange = 5..60,
+                valueRange = 1..60,
                 onValueChange = { viewModel.saveLongBreakTime(it) }
             )
 
@@ -151,14 +151,19 @@ fun SettingsScreen(
             val ringtoneOptions = listOf(
                 stringResource(R.string.ringtone_digital),
                 stringResource(R.string.ringtone_chime),
-                stringResource(R.string.ringtone_soft)
+                stringResource(R.string.ringtone_soft),
+                stringResource(R.string.ringtone_zen_bowl),
+                stringResource(R.string.ringtone_nature_wood)
             )
             
             DropdownSetting(
                 label = stringResource(R.string.settings_ringtone),
                 options = ringtoneOptions,
                 selectedIndex = ringtone,
-                onOptionSelected = { viewModel.saveRingtone(it) }
+                onOptionSelected = { 
+                    viewModel.saveRingtone(it) 
+                    viewModel.previewRingtone(it)
+                }
             )
         }
     }

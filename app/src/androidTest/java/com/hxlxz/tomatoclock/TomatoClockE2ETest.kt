@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
@@ -39,6 +40,12 @@ class TomatoClockE2ETest {
     lateinit var timeConfig: TimeConfig
 
     private lateinit var dataStore: SettingsDataStore
+
+    private fun waitUntilTextExists(text: String, timeoutMillis: Long = 5000) {
+        composeTestRule.waitUntil(timeoutMillis) {
+            composeTestRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
 
     @Before
     fun setup() {
@@ -85,7 +92,7 @@ class TomatoClockE2ETest {
         // 3. Let the timer run to completion (wait 4 seconds max)
         // mainClock.advanceTimeBy is not guaranteed to advance real dispatchers on device,
         // so we wait real time.
-        Thread.sleep(4000)
+        waitUntilTextExists("短休息")
         composeTestRule.waitForIdle()
 
         // 4. Verify it auto-transitioned to Break (since autoStartBreak is true)
@@ -140,7 +147,7 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("开始").performClick()
         
         // Wait 4 seconds for focus timer (3s) to finish
-        Thread.sleep(4000)
+        waitUntilTextExists("开始下个阶段")
         composeTestRule.waitForIdle()
 
         // Since autoStartBreak=false, we should see "开始下个阶段" and "推迟提醒"
@@ -152,7 +159,7 @@ class TomatoClockE2ETest {
         composeTestRule.waitForIdle()
 
         // Wait 3 seconds for snooze timer (2s) to finish
-        Thread.sleep(3000)
+        waitUntilTextExists("开始下个阶段")
         composeTestRule.waitForIdle()
 
         // It should be finished again
@@ -178,28 +185,29 @@ class TomatoClockE2ETest {
         
         composeTestRule.waitForIdle()
         // Wait a bit to ensure datastore propagation
-        Thread.sleep(500)
+        // Datastore sync wait
+        try { composeTestRule.waitUntil(500) { false } } catch(e: Throwable) {}
         
         composeTestRule.onNodeWithText("开始").performClick()
         
         // Cycle 1: Focus (initialized as 3s from @Before)
-        Thread.sleep(4000)
+        waitUntilTextExists("短休息")
         composeTestRule.waitForIdle()
-        
+
         // Should auto-transition to SHORT_BREAK (2s from @Before)
         composeTestRule.onNodeWithText("短休息").assertIsDisplayed()
         
         // Wait for Short break to finish (2s)
-        Thread.sleep(3000)
+        waitUntilTextExists("专注中")
         composeTestRule.waitForIdle()
-        
+
         // Cycle 2: Focus (reads 3s again)
         composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
         
         // Wait for Focus to finish (3s)
-        Thread.sleep(4000)
+        waitUntilTextExists("长休息")
         composeTestRule.waitForIdle()
-        
+
         // Because cycles = 2, we should now be in LONG_BREAK
         composeTestRule.onNodeWithText("长休息").assertIsDisplayed()
     }
