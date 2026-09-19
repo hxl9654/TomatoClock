@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.Canvas
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,7 +52,9 @@ fun TimerScreen(
         onPause = { viewModel.pauseTimer() },
         onStop = { viewModel.stopTimer() },
         onNextPhase = { viewModel.nextPhase() },
-        onSnooze = { viewModel.snooze() }
+        onSnooze = { viewModel.snooze() },
+        onAddFiveMinutes = { viewModel.addFiveMinutes() },
+        onSkipPhase = { viewModel.skipCurrentPhase() }
     )
 }
 
@@ -69,7 +73,9 @@ fun TimerScreenContent(
     onPause: () -> Unit,
     onStop: () -> Unit,
     onNextPhase: () -> Unit,
-    onSnooze: () -> Unit
+    onSnooze: () -> Unit,
+    onAddFiveMinutes: () -> Unit,
+    onSkipPhase: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "flash")
     val alphaAnim = if (timerState == TimerState.FINISHED && flashScreen) {
@@ -126,11 +132,30 @@ fun TimerScreenContent(
             verticalArrangement = Arrangement.Center
         ) {
             
-            Text(
-                text = modeText,
-                style = MaterialTheme.typography.headlineMedium,
-                color = colorPrimary
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (timerState == TimerState.RUNNING) {
+                    FilledTonalIconButton(onClick = onAddFiveMinutes) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add_time), tint = colorPrimary)
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(48.dp))
+                }
+                
+                Text(
+                    text = modeText,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = colorPrimary,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                
+                if (timerState == TimerState.RUNNING) {
+                    FilledTonalIconButton(onClick = onSkipPhase) {
+                        Icon(Icons.Default.SkipNext, contentDescription = stringResource(R.string.action_skip_phase), tint = colorPrimary)
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(48.dp))
+                }
+            }
             
             Spacer(modifier = Modifier.height(8.dp))
             
@@ -273,7 +298,9 @@ private fun TimerScreenRunningPreview() {
             onPause = {},
             onStop = {},
             onNextPhase = {},
-            onSnooze = {}
+            onSnooze = {},
+            onAddFiveMinutes = {},
+            onSkipPhase = {}
         )
     }
 }

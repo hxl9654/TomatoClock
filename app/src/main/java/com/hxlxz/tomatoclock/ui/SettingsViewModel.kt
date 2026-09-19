@@ -27,7 +27,8 @@ class SettingsViewModel @Inject constructor(
     val autoStartBreakFlow = dataStore.autoStartBreakFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val autoStartFocusFlow = dataStore.autoStartFocusFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val wakeScreenFlow = dataStore.wakeScreenFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-    val alertModeFlow = dataStore.alertModeFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val soundModeFlow = dataStore.soundModeFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val vibrationModeFlow = dataStore.vibrationModeFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
     val ringtoneFlow = dataStore.ringtoneFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
     val flashScreenFlow = dataStore.flashScreenFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
@@ -52,7 +53,8 @@ class SettingsViewModel @Inject constructor(
     fun saveAutoStartBreak(autoStart: Boolean) = safeSave { dataStore.saveAutoStartBreak(autoStart) }
     fun saveAutoStartFocus(autoStart: Boolean) = safeSave { dataStore.saveAutoStartFocus(autoStart) }
     fun saveWakeScreen(wake: Boolean) = safeSave { dataStore.saveWakeScreen(wake) }
-    fun saveAlertMode(mode: Int) = safeSave { dataStore.saveAlertMode(mode) }
+    fun saveSoundMode(mode: Int) = safeSave { dataStore.saveSoundMode(mode) }
+    fun saveVibrationMode(mode: Int) = safeSave { dataStore.saveVibrationMode(mode) }
     fun saveRingtone(ringtone: Int) = safeSave { dataStore.saveRingtone(ringtone) }
     fun saveFlashScreen(flash: Boolean) = safeSave { dataStore.saveFlashScreen(flash) }
     

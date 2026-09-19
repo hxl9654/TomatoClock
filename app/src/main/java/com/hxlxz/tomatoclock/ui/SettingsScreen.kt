@@ -37,7 +37,8 @@ fun SettingsScreen(
     val autoStartFocus by viewModel.autoStartFocusFlow.collectAsStateWithLifecycle(initialValue = false)
     val wakeScreen by viewModel.wakeScreenFlow.collectAsStateWithLifecycle(initialValue = true)
     val flashScreen by viewModel.flashScreenFlow.collectAsStateWithLifecycle(initialValue = true)
-    val alertMode by viewModel.alertModeFlow.collectAsStateWithLifecycle(initialValue = 0)
+    val soundMode by viewModel.soundModeFlow.collectAsStateWithLifecycle(initialValue = 0)
+    val vibrationMode by viewModel.vibrationModeFlow.collectAsStateWithLifecycle(initialValue = 0)
     val ringtone by viewModel.ringtoneFlow.collectAsStateWithLifecycle(initialValue = 1)
 
     Scaffold(
@@ -133,19 +134,30 @@ fun SettingsScreen(
                 onCheckedChange = { viewModel.saveFlashScreen(it) }
             )
 
-            val alertModeOptions = listOf(
-                stringResource(R.string.alert_mode_sound_vib),
-                stringResource(R.string.alert_mode_sound),
-                stringResource(R.string.alert_mode_vib),
-                stringResource(R.string.alert_mode_single_sound),
-                stringResource(R.string.alert_mode_silent)
+            val soundModeOptions = listOf(
+                stringResource(R.string.sound_mode_continuous),
+                stringResource(R.string.sound_mode_single),
+                stringResource(R.string.sound_mode_off)
             )
             
             DropdownSetting(
-                label = stringResource(R.string.settings_alert_mode),
-                options = alertModeOptions,
-                selectedIndex = alertMode,
-                onOptionSelected = { viewModel.saveAlertMode(it) }
+                label = stringResource(R.string.settings_sound_mode),
+                options = soundModeOptions,
+                selectedIndex = soundMode,
+                onOptionSelected = { viewModel.saveSoundMode(it) }
+            )
+
+            val vibrationModeOptions = listOf(
+                stringResource(R.string.vibration_mode_continuous),
+                stringResource(R.string.vibration_mode_single),
+                stringResource(R.string.vibration_mode_off)
+            )
+            
+            DropdownSetting(
+                label = stringResource(R.string.settings_vibration_mode),
+                options = vibrationModeOptions,
+                selectedIndex = vibrationMode,
+                onOptionSelected = { viewModel.saveVibrationMode(it) }
             )
             
             val ringtoneOptions = listOf(

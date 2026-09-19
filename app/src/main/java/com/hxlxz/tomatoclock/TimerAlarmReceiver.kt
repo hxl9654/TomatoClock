@@ -15,6 +15,6 @@ class TimerAlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         Log.d("TimerAlarmReceiver", "Exact alarm fired! Forcing timer finish.")
-        repository.forceFinishTimer()
+        repository.forceFinishTimer(fromAlarm = true)
     }
 }

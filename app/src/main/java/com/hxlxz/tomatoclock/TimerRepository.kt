@@ -184,8 +184,35 @@ class TimerRepository @Inject constructor(
         return minutes * timeConfig.multiplier
     }
 
-    fun forceFinishTimer() {
+    fun addTime(seconds: Long) {
         if (_timerState.value == TimerState.RUNNING) {
+            targetEndTimeMs += (seconds * 1000L)
+            _totalTimeInSeconds.value += seconds
+            alarmScheduler.scheduleAlarm(targetEndTimeMs)
+            
+            // Immediately update remaining time for UI responsiveness
+            val now = SystemClock.elapsedRealtime()
+            val remainingMs = targetEndTimeMs - now
+            if (remainingMs > 0) {
+                _timeRemaining.value = (remainingMs + 999L) / 1000L
+            }
+        } else if (_timerState.value == TimerState.PAUSED) {
+            pausedTimeRemainingSeconds += seconds
+            _totalTimeInSeconds.value += seconds
+            _timeRemaining.value = pausedTimeRemainingSeconds
+        }
+    }
+
+    fun forceFinishTimer(fromAlarm: Boolean = false) {
+        if (_timerState.value == TimerState.RUNNING) {
+            if (fromAlarm) {
+                // If this is triggered by the alarm, ensure it's not a stale alarm
+                // caused by a recent addTime operation pushing the target end time further.
+                val now = SystemClock.elapsedRealtime()
+                if (now < targetEndTimeMs - 2000L) {
+                    return
+                }
+            }
             timerJob?.cancel()
             alarmScheduler.cancelAlarm()
             _timeRemaining.value = 0

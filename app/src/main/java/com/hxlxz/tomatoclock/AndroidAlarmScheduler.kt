@@ -37,10 +37,16 @@ class AndroidAlarmScheduler @Inject constructor(
                 return
             }
 
+            // triggerAtMillis is based on SystemClock.elapsedRealtime().
+            // AlarmManager.setAlarmClock uses RTC (Real Time Clock), i.e. System.currentTimeMillis().
+            // We must convert the elapsed time base to RTC base.
+            val delayMs = triggerAtMillis - android.os.SystemClock.elapsedRealtime()
+            val triggerAtRTC = System.currentTimeMillis() + delayMs
+
             val pendingIntent = getAlarmPendingIntent()
-            val info = AlarmManager.AlarmClockInfo(triggerAtMillis, pendingIntent)
+            val info = AlarmManager.AlarmClockInfo(triggerAtRTC, pendingIntent)
             alarmManager.setAlarmClock(info, pendingIntent)
-            Log.d(TAG, "Exact alarm scheduled for ${triggerAtMillis}ms (elapsedRealtime)")
+            Log.d(TAG, "Exact alarm scheduled for ${triggerAtRTC}ms (RTC), delay=${delayMs}ms")
         } catch (e: SecurityException) {
             Log.e(TAG, "SecurityException: Cannot schedule exact alarm. Permission may have been revoked.", e)
         } catch (e: Exception) {

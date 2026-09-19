@@ -1,8 +1,7 @@
 package com.hxlxz.tomatoclock
 
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.*
 import com.hxlxz.tomatoclock.ui.TimerScreen
 import io.mockk.every
 import io.mockk.mockk
@@ -95,5 +94,62 @@ class TimerScreenInstrumentedTest {
         composeTestRule.onNodeWithText("推迟提醒").performClick()
         composeTestRule.waitForIdle()
         verify { viewModel.snooze() }
+    }
+
+    @Test
+    fun `timerControls_addTimeAndSkip_visibleOnlyWhenRunning`() {
+        val viewModel = mockk<TimerViewModel>(relaxed = true)
+        every { viewModel.timerMode } returns MutableStateFlow(TimerMode.FOCUS)
+        val stateFlow = MutableStateFlow(TimerState.IDLE)
+        every { viewModel.timerState } returns stateFlow
+        every { viewModel.timeRemaining } returns MutableStateFlow(25 * 60L)
+        every { viewModel.totalTimeInSeconds } returns MutableStateFlow(25 * 60L)
+        every { viewModel.currentCycle } returns MutableStateFlow(1)
+        every { viewModel.totalCycles } returns MutableStateFlow(4)
+        every { viewModel.flashScreen } returns MutableStateFlow(false)
+
+        composeTestRule.setContent {
+            TimerScreen(onNavigateToSettings = {}, viewModel = viewModel)
+        }
+
+        // When IDLE, buttons should not exist
+        composeTestRule.onNodeWithContentDescription("加5分钟").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("跳过当前周期").assertDoesNotExist()
+
+        // Switch to PAUSED
+        stateFlow.value = TimerState.PAUSED
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("加5分钟").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("跳过当前周期").assertDoesNotExist()
+
+        // Switch to RUNNING
+        stateFlow.value = TimerState.RUNNING
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("加5分钟").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("跳过当前周期").assertIsDisplayed()
+    }
+
+    @Test
+    fun `click add time and skip phase delegate to viewModel`() {
+        val viewModel = mockk<TimerViewModel>(relaxed = true)
+        every { viewModel.timerMode } returns MutableStateFlow(TimerMode.FOCUS)
+        every { viewModel.timerState } returns MutableStateFlow(TimerState.RUNNING)
+        every { viewModel.timeRemaining } returns MutableStateFlow(25 * 60L)
+        every { viewModel.totalTimeInSeconds } returns MutableStateFlow(25 * 60L)
+        every { viewModel.currentCycle } returns MutableStateFlow(1)
+        every { viewModel.totalCycles } returns MutableStateFlow(4)
+        every { viewModel.flashScreen } returns MutableStateFlow(false)
+
+        composeTestRule.setContent {
+            TimerScreen(onNavigateToSettings = {}, viewModel = viewModel)
+        }
+
+        composeTestRule.onNodeWithContentDescription("加5分钟").performClick()
+        composeTestRule.waitForIdle()
+        verify { viewModel.addFiveMinutes() }
+
+        composeTestRule.onNodeWithContentDescription("跳过当前周期").performClick()
+        composeTestRule.waitForIdle()
+        verify { viewModel.skipCurrentPhase() }
     }
 }

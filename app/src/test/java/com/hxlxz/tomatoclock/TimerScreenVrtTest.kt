@@ -37,7 +37,9 @@ class TimerScreenVrtTest {
                     onPause = {},
                     onStop = {},
                     onNextPhase = {},
-                    onSnooze = {}
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
                 )
             }
         }
@@ -62,7 +64,9 @@ class TimerScreenVrtTest {
                     onPause = {},
                     onStop = {},
                     onNextPhase = {},
-                    onSnooze = {}
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
                 )
             }
         }
@@ -88,7 +92,9 @@ class TimerScreenVrtTest {
                     onPause = {},
                     onStop = {},
                     onNextPhase = {},
-                    onSnooze = {}
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
                 )
             }
         }
@@ -114,7 +120,9 @@ class TimerScreenVrtTest {
                     onPause = {},
                     onStop = {},
                     onNextPhase = {},
-                    onSnooze = {}
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
                 )
             }
         }
@@ -140,7 +148,9 @@ class TimerScreenVrtTest {
                     onPause = {},
                     onStop = {},
                     onNextPhase = {},
-                    onSnooze = {}
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
                 )
             }
         }

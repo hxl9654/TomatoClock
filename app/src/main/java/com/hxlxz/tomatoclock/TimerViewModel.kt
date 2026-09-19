@@ -29,5 +29,13 @@ class TimerViewModel @Inject constructor(
     fun stopTimer() = repository.stopTimer()
     fun nextPhase() = repository.nextPhase()
     fun snooze() = repository.snooze()
+    
+    fun addFiveMinutes() {
+        repository.addTime(300)
+    }
+    
+    fun skipCurrentPhase() {
+        repository.forceFinishTimer()
+    }
 }
 

@@ -21,7 +21,8 @@ class SettingsDataStore(private val context: Context) {
         val SNOOZE_TIME = intPreferencesKey("snooze_time_minutes")
         
         // Reminder Settings
-        val ALERT_MODE = intPreferencesKey("alert_mode") // 0: Sound+Vib, 1: Sound, 2: Vib, 3: SingleSound, 4: Silent
+        val SOUND_MODE = intPreferencesKey("sound_mode") // 0: Continuous, 1: Single, 2: Off
+        val VIBRATION_MODE = intPreferencesKey("vibration_mode") // 0: Continuous, 1: Single, 2: Off
         val RINGTONE = intPreferencesKey("ringtone") // 0: Digital, 1: Chime, 2: Soft Synth
         val WAKE_SCREEN = androidx.datastore.preferences.core.booleanPreferencesKey("wake_screen")
         val FLASH_SCREEN = androidx.datastore.preferences.core.booleanPreferencesKey("flash_screen")
@@ -51,8 +52,12 @@ class SettingsDataStore(private val context: Context) {
         preferences[SNOOZE_TIME] ?: 5
     }
     
-    val alertModeFlow: Flow<Int> = context.dataStore.data.map { preferences ->
-        preferences[ALERT_MODE] ?: 0 // Default to Sound + Vibrate
+    val soundModeFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[SOUND_MODE] ?: 0 // Default to Continuous
+    }
+    
+    val vibrationModeFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[VIBRATION_MODE] ?: 0 // Default to Continuous
     }
     
     val ringtoneFlow: Flow<Int> = context.dataStore.data.map { preferences ->
@@ -105,10 +110,15 @@ class SettingsDataStore(private val context: Context) {
         }
     }
     
-    suspend fun saveAlertMode(mode: Int) {
+    suspend fun saveSoundMode(mode: Int) {
         context.dataStore.edit { preferences ->
-            // 校验范围: 0 (SOUND_AND_VIBRATE) ~ 4 (SILENT)，与 AlertMode 枚举值对应
-            preferences[ALERT_MODE] = mode.coerceIn(0, AlertMode.entries.size - 1)
+            preferences[SOUND_MODE] = mode.coerceIn(0, SoundMode.entries.size - 1)
+        }
+    }
+
+    suspend fun saveVibrationMode(mode: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[VIBRATION_MODE] = mode.coerceIn(0, VibrationMode.entries.size - 1)
         }
     }
     

@@ -60,7 +60,8 @@ class SettingsViewModelTest {
         viewModel.saveAutoStartBreak(true)
         viewModel.saveAutoStartFocus(true)
         viewModel.saveWakeScreen(false)
-        viewModel.saveAlertMode(2)
+        viewModel.saveSoundMode(1)
+        viewModel.saveVibrationMode(2)
         viewModel.saveRingtone(3)
         viewModel.saveFlashScreen(false)
         
@@ -74,7 +75,8 @@ class SettingsViewModelTest {
         coVerify(exactly = 1) { dataStore.saveAutoStartBreak(true) }
         coVerify(exactly = 1) { dataStore.saveAutoStartFocus(true) }
         coVerify(exactly = 1) { dataStore.saveWakeScreen(false) }
-        coVerify(exactly = 1) { dataStore.saveAlertMode(2) }
+        coVerify(exactly = 1) { dataStore.saveSoundMode(1) }
+        coVerify(exactly = 1) { dataStore.saveVibrationMode(2) }
         coVerify(exactly = 1) { dataStore.saveRingtone(3) }
         coVerify(exactly = 1) { dataStore.saveFlashScreen(false) }
     }

@@ -1,14 +1,22 @@
 package com.hxlxz.tomatoclock
 
-enum class AlertMode(val value: Int) {
-    SOUND_AND_VIBRATE(0),
-    SOUND_ONLY(1),
-    VIBRATE_ONLY(2),
-    SINGLE_SOUND(3),
-    SILENT(4);
+enum class SoundMode(val value: Int) {
+    CONTINUOUS(0),
+    SINGLE(1),
+    OFF(2);
 
     companion object {
-        fun fromInt(value: Int) = entries.find { it.value == value } ?: SOUND_AND_VIBRATE
+        fun fromInt(value: Int) = entries.find { it.value == value } ?: CONTINUOUS
+    }
+}
+
+enum class VibrationMode(val value: Int) {
+    CONTINUOUS(0),
+    SINGLE(1),
+    OFF(2);
+
+    companion object {
+        fun fromInt(value: Int) = entries.find { it.value == value } ?: CONTINUOUS
     }
 }
 

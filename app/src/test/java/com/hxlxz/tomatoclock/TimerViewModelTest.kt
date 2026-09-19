@@ -110,4 +110,16 @@ class TimerViewModelTest {
         // 初始值应等于 stateIn 的 initialValue
         assertEquals(true, state.value)
     }
+
+    @Test
+    fun `test addFiveMinutes delegates to repository addTime with 300`() {
+        viewModel.addFiveMinutes()
+        verify { repository.addTime(300L) }
+    }
+
+    @Test
+    fun `test skipCurrentPhase delegates to repository forceFinishTimer`() {
+        viewModel.skipCurrentPhase()
+        verify { repository.forceFinishTimer() }
+    }
 }

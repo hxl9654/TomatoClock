@@ -30,25 +30,28 @@ class AlarmPlayer @Inject constructor(
     private val handler = Handler(Looper.getMainLooper())
     private val stopRunnable = Runnable { stop() }
 
-    // 0: Sound+Vib, 1: Sound, 2: Vib, 3: SingleSound, 4: Silent
-    fun play(alertMode: AlertMode, ringtoneIndex: Ringtone) {
+    fun play(soundMode: SoundMode, vibrationMode: VibrationMode, ringtoneIndex: Ringtone) {
         stop() // Ensure previous is stopped
 
-        if (alertMode == AlertMode.SILENT) return
-
         // Setup Vibrator
-        if (alertMode == AlertMode.SOUND_AND_VIBRATE || alertMode == AlertMode.VIBRATE_ONLY) {
-            val pattern = longArrayOf(0, 500, 500) // wait 0, vibrate 500, sleep 500
+        if (vibrationMode != VibrationMode.OFF) {
+            val pattern = if (vibrationMode == VibrationMode.CONTINUOUS) {
+                longArrayOf(0, 500, 500)
+            } else {
+                longArrayOf(0, 1000)
+            }
+            val repeatIndex = if (vibrationMode == VibrationMode.CONTINUOUS) 0 else -1
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createWaveform(pattern, 0)) // 0 means repeat at index 0
+                vibrator.vibrate(VibrationEffect.createWaveform(pattern, repeatIndex))
             } else {
                 @Suppress("DEPRECATION")
-                vibrator.vibrate(pattern, 0)
+                vibrator.vibrate(pattern, repeatIndex)
             }
         }
 
         // Setup MediaPlayer
-        if (alertMode == AlertMode.SOUND_AND_VIBRATE || alertMode == AlertMode.SOUND_ONLY || alertMode == AlertMode.SINGLE_SOUND) {
+        if (soundMode != SoundMode.OFF) {
             val audioRes = getAudioRes(ringtoneIndex.value)
 
             try {
@@ -59,12 +62,17 @@ class AlarmPlayer @Inject constructor(
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                             .build()
                     )
-                    if (alertMode == AlertMode.SINGLE_SOUND) {
-                        // 单次提示音：播放完整音频后自然停止，不循环不截断
+                    if (soundMode == SoundMode.SINGLE) {
                         isLooping = false
-                        setOnCompletionListener { stop() }
+                        setOnCompletionListener { 
+                            try {
+                                it.release()
+                                if (mediaPlayer == it) {
+                                    mediaPlayer = null
+                                }
+                            } catch (e: Exception) {}
+                        }
                     } else {
-                        // 持续铃声（SOUND_AND_VIBRATE / SOUND_ONLY）：循环直到手动停止
                         isLooping = true
                     }
                     start()

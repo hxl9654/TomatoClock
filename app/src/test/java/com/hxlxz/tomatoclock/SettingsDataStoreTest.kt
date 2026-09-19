@@ -40,7 +40,8 @@ class SettingsDataStoreTest {
         assertEquals(15, dataStore.longBreakTimeFlow.first())
         assertEquals(4, dataStore.cyclesFlow.first())
         assertEquals(5, dataStore.snoozeTimeFlow.first())
-        assertEquals(0, dataStore.alertModeFlow.first())
+        assertEquals(0, dataStore.soundModeFlow.first())
+        assertEquals(0, dataStore.vibrationModeFlow.first())
         assertEquals(true, dataStore.wakeScreenFlow.first())
         assertEquals(false, dataStore.autoStartBreakFlow.first())
         assertEquals(false, dataStore.autoStartFocusFlow.first())
@@ -77,9 +78,15 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `save and read alert mode`() = runTest {
-        dataStore.saveAlertMode(3)
-        assertEquals(3, dataStore.alertModeFlow.first())
+    fun `save and read sound mode`() = runTest {
+        dataStore.saveSoundMode(1)
+        assertEquals(1, dataStore.soundModeFlow.first())
+    }
+
+    @Test
+    fun `save and read vibration mode`() = runTest {
+        dataStore.saveVibrationMode(1)
+        assertEquals(1, dataStore.vibrationModeFlow.first())
     }
 
     @Test
@@ -121,20 +128,33 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `save alertMode clamps to valid enum range`() = runTest {
-        // 有效边界值
-        dataStore.saveAlertMode(0)
-        assertEquals(0, dataStore.alertModeFlow.first())
+    fun `save soundMode clamps to valid enum range`() = runTest {
+        dataStore.saveSoundMode(0)
+        assertEquals(0, dataStore.soundModeFlow.first())
 
-        dataStore.saveAlertMode(4) // AlertMode.SILENT
-        assertEquals(4, dataStore.alertModeFlow.first())
+        dataStore.saveSoundMode(2) // SoundMode.OFF
+        assertEquals(2, dataStore.soundModeFlow.first())
 
-        // 越界值应被截断到最近有效值
-        dataStore.saveAlertMode(-1)
-        assertEquals(0, dataStore.alertModeFlow.first())
+        dataStore.saveSoundMode(-1)
+        assertEquals(0, dataStore.soundModeFlow.first())
 
-        dataStore.saveAlertMode(99)
-        assertEquals(4, dataStore.alertModeFlow.first()) // 截断到 AlertMode.entries.size - 1 = 4
+        dataStore.saveSoundMode(99)
+        assertEquals(2, dataStore.soundModeFlow.first()) // 截断到 SoundMode.entries.size - 1 = 2
+    }
+
+    @Test
+    fun `save vibrationMode clamps to valid enum range`() = runTest {
+        dataStore.saveVibrationMode(0)
+        assertEquals(0, dataStore.vibrationModeFlow.first())
+
+        dataStore.saveVibrationMode(2) // VibrationMode.OFF
+        assertEquals(2, dataStore.vibrationModeFlow.first())
+
+        dataStore.saveVibrationMode(-1)
+        assertEquals(0, dataStore.vibrationModeFlow.first())
+
+        dataStore.saveVibrationMode(99)
+        assertEquals(2, dataStore.vibrationModeFlow.first()) // 截断到 VibrationMode.entries.size - 1 = 2
     }
 
     @Test

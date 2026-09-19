@@ -439,4 +439,70 @@ class TimerRepositoryTest {
         // 状态仍是 FINISHED，不会重复迁移
         assertEquals(TimerState.FINISHED, repository.timerState.value)
     }
+
+    @Test
+    fun `addTime when RUNNING increases timeRemaining and totalTime`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+        
+        val initialTotal = repository.totalTimeInSeconds.value
+        val initialRemaining = repository.timeRemaining.value
+        
+        // Add 5 minutes (300 seconds)
+        repository.addTime(300)
+        testScheduler.runCurrent()
+        
+        assertEquals(initialTotal + 300, repository.totalTimeInSeconds.value)
+        assertEquals(initialRemaining + 300, repository.timeRemaining.value)
+        io.mockk.verify(atLeast = 1) { mockAlarmScheduler.scheduleAlarm(any()) }
+    }
+
+    @Test
+    fun `addTime when PAUSED increases pausedTimeRemaining`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+        advanceTimeBy(2000)
+        
+        repository.pauseTimer()
+        testScheduler.runCurrent()
+        
+        val timeBeforeAdd = repository.timeRemaining.value
+        val totalBeforeAdd = repository.totalTimeInSeconds.value
+        
+        repository.addTime(300)
+        testScheduler.runCurrent()
+        
+        assertEquals(timeBeforeAdd + 300, repository.timeRemaining.value)
+        assertEquals(totalBeforeAdd + 300, repository.totalTimeInSeconds.value)
+        
+        // Resume to ensure the added time is carried over
+        repository.startTimer()
+        testScheduler.runCurrent()
+        assertEquals(timeBeforeAdd + 300, repository.timeRemaining.value)
+    }
+
+    @Test
+    fun `forceFinishTimer from alarm ignores stale alarm after addTime`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+
+        // Fast forward 1 minute
+        advanceTimeBy(60_000)
+        
+        // Add 5 minutes
+        repository.addTime(300)
+        testScheduler.runCurrent()
+
+        // Simulate an alarm firing for the OLD time (which is now in the past compared to targetEndTimeMs)
+        // Since we just added 5 mins (300_000ms), the current time is 300_000ms before targetEndTimeMs.
+        // A stale alarm fires, meaning now < targetEndTimeMs - 2000L.
+        repository.forceFinishTimer(fromAlarm = true)
+        testScheduler.runCurrent()
+        
+        // Timer should STILL be RUNNING because the stale alarm was ignored
+        assertEquals(TimerState.RUNNING, repository.timerState.value)
+    }
 }

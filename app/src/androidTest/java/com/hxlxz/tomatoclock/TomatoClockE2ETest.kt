@@ -196,26 +196,40 @@ class TomatoClockE2ETest {
     }
 
     @Test
-    fun testSettingsAlertModeModification() {
+    fun testSettingsSoundAndVibrationModification() {
         composeTestRule.waitForIdle()
 
         // Go to settings
         composeTestRule.onNodeWithContentDescription("设置").performClick()
         composeTestRule.waitForIdle()
         
-        // Find Alert mode label
-        composeTestRule.onNodeWithText("提醒模式").performScrollTo().assertIsDisplayed()
+        // Find Sound Mode label
+        composeTestRule.onNodeWithText("铃声模式").performScrollTo().assertIsDisplayed()
         
-        // Click the dropdown (the default value should be 闹铃 + 震动)
-        composeTestRule.onNodeWithText("闹铃 + 震动").performScrollTo().performClick()
+        // Click the dropdown (the default value should be 持续响铃)
+        composeTestRule.onNodeWithText("持续响铃").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         
-        // Select "仅闹铃"
-        composeTestRule.onNodeWithText("仅闹铃").performScrollTo().performClick()
+        // Select "响铃一次"
+        composeTestRule.onNodeWithText("响铃一次").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         
         // Verify it was updated
-        composeTestRule.onNodeWithText("仅闹铃").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("响铃一次").performScrollTo().assertIsDisplayed()
+        
+        // Find Vibration Mode label
+        composeTestRule.onNodeWithText("震动模式").performScrollTo().assertIsDisplayed()
+        
+        // Click the dropdown (the default value should be 持续震动)
+        composeTestRule.onNodeWithText("持续震动").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        
+        // Select "震动一次"
+        composeTestRule.onNodeWithText("震动一次").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        
+        // Verify it was updated
+        composeTestRule.onNodeWithText("震动一次").performScrollTo().assertIsDisplayed()
         
         // Go back
         composeTestRule.onNodeWithContentDescription("返回").performClick()
