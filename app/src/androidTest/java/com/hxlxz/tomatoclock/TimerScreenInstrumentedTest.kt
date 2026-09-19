@@ -1,6 +1,6 @@
 package com.hxlxz.tomatoclock
 
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.*
 import com.hxlxz.tomatoclock.ui.TimerScreen
 import io.mockk.every
@@ -97,7 +97,7 @@ class TimerScreenInstrumentedTest {
     }
 
     @Test
-    fun `timerControls_addTimeAndSkip_visibleOnlyWhenRunning`() {
+    fun timerControls_addTimeAndSkip_visibleOnlyWhenRunning() {
         val viewModel = mockk<TimerViewModel>(relaxed = true)
         every { viewModel.timerMode } returns MutableStateFlow(TimerMode.FOCUS)
         val stateFlow = MutableStateFlow(TimerState.IDLE)

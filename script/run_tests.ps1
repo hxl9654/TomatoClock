@@ -38,29 +38,51 @@ Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "                测试完成                 " -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
+function Confirm-TestCount {
+    param([string]$ReportPath, [string]$TestType)
+    if (Test-Path $ReportPath) {
+        $content = Get-Content $ReportPath -Raw
+        if ($content -match '<div class="infoBox" id="tests">\s*<div class="counter">0</div>') {
+            Write-Host "❌ $TestType 运行了 0 个测试！(可能测试未被识别、配置错误或无设备)" -ForegroundColor Red
+            return $false
+        }
+    } else {
+        Write-Host "⚠️ 找不到 $TestType 的测试报告，无法验证测试数量。" -ForegroundColor Yellow
+    }
+    return $true
+}
+
 if ($LintExit -ne 0) {
     Write-Host "❌ Lint 静态分析发现错误，请查看 app/build/reports/lint-results-debug.html。" -ForegroundColor Red
 } else {
     Write-Host "✅ Lint 静态分析通过！" -ForegroundColor Green
 }
 
+$UnitTestValid = $true
 if ($UnitTestExit -ne 0) {
     Write-Host "❌ 本地单元测试有失败项 (注意: 如果您使用的是 JDK 25，Robolectric 本地测试可能不兼容)。" -ForegroundColor Red
 } else {
-    Write-Host "✅ 本地单元测试全部通过！" -ForegroundColor Green
+    $UnitTestValid = Confirm-TestCount ".\app\build\reports\tests\testDebugUnitTest\index.html" "本地单元测试"
+    if ($UnitTestValid) {
+        Write-Host "✅ 本地单元测试全部通过！" -ForegroundColor Green
+    }
 }
 
+$InstrumentedTestValid = $true
 if ($InstrumentedTestExit -ne 0) {
     Write-Host "❌ 仪器化测试有失败项 (请检查是否已连接设备或代码逻辑报错)。" -ForegroundColor Red
 } else {
-    Write-Host "✅ 仪器化测试全部通过！" -ForegroundColor Green
+    $InstrumentedTestValid = Confirm-TestCount ".\app\build\reports\androidTests\connected\debug\index.html" "仪器化测试"
+    if ($InstrumentedTestValid) {
+        Write-Host "✅ 仪器化测试全部通过！" -ForegroundColor Green
+    }
 }
 
-if ($LintExit -eq 0 -and $UnitTestExit -eq 0 -and $InstrumentedTestExit -eq 0) {
+if ($LintExit -eq 0 -and $UnitTestExit -eq 0 -and $InstrumentedTestExit -eq 0 -and $UnitTestValid -and $InstrumentedTestValid) {
     Write-Host ""
     Write-Host "🎉 恭喜！Lint + 所有测试均已成功通过！" -ForegroundColor Green
 } else {
     Write-Host ""
-    Write-Host "⚠️ 部分检查未通过，请查看上方日志或 app/build/reports 目录下的报告。" -ForegroundColor Yellow
+    Write-Host "⚠️ 部分检查未通过（或执行了 0 个测试），请查看上方日志。" -ForegroundColor Yellow
     exit 1
 }

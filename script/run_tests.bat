@@ -38,24 +38,40 @@ if %LINT_EXIT% neq 0 (
     echo [v] Lint 静态分析通过！
 )
 
+set UNIT_TEST_VALID=1
 if %UNIT_TEST_EXIT% neq 0 (
     echo [X] 本地单元测试有失败项 (注意: 如果您使用的是 JDK 25，Robolectric 本地测试可能不兼容)。
+    set UNIT_TEST_VALID=0
 ) else (
-    echo [v] 本地单元测试全部通过！
+    powershell -NoProfile -Command "$c=Get-Content 'app\build\reports\tests\testDebugUnitTest\index.html' -Raw -ErrorAction Ignore; if ($c -match '<div class=\"infoBox\" id=\"tests\">\s*<div class=\"counter\">0</div>') { exit 1 } else { exit 0 }"
+    if errorlevel 1 (
+        echo [X] 本地单元测试运行了 0 个测试！^(可能测试未被识别或配置错误^)
+        set UNIT_TEST_VALID=0
+    ) else (
+        echo [v] 本地单元测试全部通过！
+    )
 )
 
+set INST_TEST_VALID=1
 if %INST_TEST_EXIT% neq 0 (
     echo [X] 仪器化测试有失败项 (请检查是否已连接设备或代码逻辑报错)。
+    set INST_TEST_VALID=0
 ) else (
-    echo [v] 仪器化测试全部通过！
+    powershell -NoProfile -Command "$c=Get-Content 'app\build\reports\androidTests\connected\debug\index.html' -Raw -ErrorAction Ignore; if ($c -match '<div class=\"infoBox\" id=\"tests\">\s*<div class=\"counter\">0</div>') { exit 1 } else { exit 0 }"
+    if errorlevel 1 (
+        echo [X] 仪器化测试运行了 0 个测试！^(可能测试未被识别、配置错误或无设备^)
+        set INST_TEST_VALID=0
+    ) else (
+        echo [v] 仪器化测试全部通过！
+    )
 )
 
-if %LINT_EXIT% equ 0 if %UNIT_TEST_EXIT% equ 0 if %INST_TEST_EXIT% equ 0 (
+if %LINT_EXIT% equ 0 if %UNIT_TEST_VALID% equ 1 if %INST_TEST_VALID% equ 1 (
     echo.
     echo 恭喜！Lint + 所有测试均已成功通过！
     exit /b 0
 ) else (
     echo.
-    echo 部分检查未通过，请查看上方日志或 app/build/reports 目录下的报告。
+    echo 部分检查未通过（或执行了 0 个测试），请查看上方日志或 app/build/reports 目录下的报告。
     exit /b 1
 )

@@ -1,5 +1,6 @@
 package com.hxlxz.tomatoclock
 
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
@@ -25,6 +26,7 @@ class AndroidAlarmScheduler @Inject constructor(
         )
     }
 
+    @SuppressLint("ObsoleteSdkInt")
     override fun scheduleAlarm(triggerAtMillis: Long) {
         try {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager

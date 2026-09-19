@@ -10,7 +10,7 @@ import javax.inject.Inject
 @HiltViewModel
 class TimerViewModel @Inject constructor(
     private val repository: TimerRepository,
-    private val settingsDataStore: SettingsDataStore
+    settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
     val timerMode = repository.timerMode

@@ -18,15 +18,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.hxlxz.tomatoclock.R
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel(),
+    viewModel: SettingsViewModel = hiltViewModel(
+        checkNotNull(
+            LocalViewModelStoreOwner.current
+        ) {
+                "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
+            }, null
+    ),
     onNavigateBack: () -> Unit
 ) {
 
@@ -266,10 +274,10 @@ private fun RepeatableIconButton(
 
     LaunchedEffect(isPressed) {
         if (isPressed) {
-            delay(500L) // 长按触发前的初始等待
-            while (isPressed) {
+            delay(500L.milliseconds) // 长按触发前的初始等待
+            while (true) {
                 currentOnClick()
-                delay(80L) // 连续触发间隔
+                delay(80L.milliseconds) // 连续触发间隔
             }
         }
     }
@@ -343,7 +351,7 @@ fun DropdownSetting(
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                    modifier = Modifier.menuAnchor()
+                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                 )
                 ExposedDropdownMenu(
                     expanded = expanded,

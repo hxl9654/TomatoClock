@@ -1,9 +1,7 @@
 package com.hxlxz.tomatoclock
 
 import android.content.Context
-import android.media.MediaPlayer
 import android.os.Build
-import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -12,12 +10,9 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowMediaPlayer
 import org.robolectric.shadows.ShadowVibrator
-import org.robolectric.shadows.util.DataSource
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [Build.VERSION_CODES.UPSIDE_DOWN_CAKE])
@@ -77,7 +72,7 @@ class AlarmPlayerTest {
         alarmPlayer.play(SoundMode.CONTINUOUS, VibrationMode.CONTINUOUS, Ringtone.CHIME)
         alarmPlayer.stop()
         
-        // Verify vibration is cancelled
+        // Verify vibration is canceled
         org.junit.Assert.assertTrue(shadowVibrator.isCancelled)
     }
 }

@@ -1,9 +1,9 @@
 package com.hxlxz.tomatoclock
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
-import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -20,6 +20,7 @@ class AlarmPlayer @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private var mediaPlayer: MediaPlayer? = null
+    @SuppressLint("ObsoleteSdkInt")
     private val vibrator: Vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
         vibratorManager.defaultVibrator
@@ -30,6 +31,7 @@ class AlarmPlayer @Inject constructor(
     private val handler = Handler(Looper.getMainLooper())
     private val stopRunnable = Runnable { stop() }
 
+    @SuppressLint("ObsoleteSdkInt")
     fun play(soundMode: SoundMode, vibrationMode: VibrationMode, ringtoneIndex: Ringtone) {
         stop() // Ensure previous is stopped
 

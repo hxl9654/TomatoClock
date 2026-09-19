@@ -1,11 +1,11 @@
 package com.hxlxz.tomatoclock
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -41,7 +41,7 @@ class TimerService : Service() {
     private var partialWakeLock: PowerManager.WakeLock? = null
 
     companion object {
-        const val CHANNEL_ID = "tomatoclock_channel"
+        const val CHANNEL_ID = "tomato-clock_channel"
         const val NOTIFICATION_ID = 1
 
         const val ACTION_START = "ACTION_START"
@@ -99,7 +99,7 @@ class TimerService : Service() {
     
     private fun acquireWakeLock() {
         if (partialWakeLock == null) {
-            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
             partialWakeLock = powerManager.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
                 "TomatoClock::TimerWakeLock"
@@ -149,6 +149,7 @@ class TimerService : Service() {
         notificationManager.notify(NOTIFICATION_ID, buildNotification(state, time, mode, wakeScreen))
     }
 
+    @SuppressLint("FullScreenIntentPolicy")
     private fun buildNotification(state: TimerState, time: Long, mode: TimerMode, wakeScreen: Boolean): Notification {
         val title = when (mode) {
             TimerMode.FOCUS -> getString(R.string.state_focus)
@@ -158,7 +159,7 @@ class TimerService : Service() {
 
         val minutes = time / 60
         val seconds = time % 60
-        val timeString = String.format("%02d:%02d", minutes, seconds)
+        val timeString = String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
 
         val contentText = when (state) {
             TimerState.IDLE -> getString(R.string.notification_idle)
@@ -226,6 +227,7 @@ class TimerService : Service() {
         return PendingIntent.getService(this, action.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
+    @SuppressLint("ObsoleteSdkInt")
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(

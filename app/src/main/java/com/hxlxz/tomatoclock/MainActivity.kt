@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -17,6 +18,7 @@ import com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import android.Manifest
+import android.annotation.SuppressLint
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
@@ -42,7 +44,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @SuppressLint("ObsoleteSdkInt")
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

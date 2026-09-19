@@ -1,5 +1,6 @@
 package com.hxlxz.tomatoclock
 
+import android.os.SystemClock
 import app.cash.turbine.test
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -7,21 +8,19 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import android.os.SystemClock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TimerRepositoryTest {
@@ -82,7 +81,7 @@ class TimerRepositoryTest {
 
         repository.timeRemaining.test {
             val initial = awaitItem()
-            advanceTimeBy(1001)
+            advanceTimeBy(1001.milliseconds)
             val afterOneSec = awaitItem()
             assertEquals(initial - 1, afterOneSec)
         }
@@ -93,7 +92,7 @@ class TimerRepositoryTest {
         testScheduler.advanceUntilIdle()
         repository.startTimer()
         testScheduler.runCurrent()
-        advanceTimeBy(2000)
+        advanceTimeBy(2000.milliseconds)
 
         repository.pauseTimer()
         testScheduler.runCurrent()
@@ -103,8 +102,8 @@ class TimerRepositoryTest {
         }
 
         repository.timeRemaining.test {
-            val pausedTime = awaitItem()
-            advanceTimeBy(3000)
+            awaitItem() // Consume current state
+            advanceTimeBy(3000.milliseconds)
             // Time should not change when paused
             expectNoEvents()
         }
@@ -156,7 +155,7 @@ class TimerRepositoryTest {
         testScheduler.advanceUntilIdle()
         // Let it finish
         repository.startTimer()
-        advanceTimeBy(25 * 60 * 1000L + 1000)
+        advanceTimeBy((25 * 60 * 1000L + 1000).milliseconds)
 
         repository.snooze()
         testScheduler.runCurrent()
@@ -430,7 +429,7 @@ class TimerRepositoryTest {
         testScheduler.advanceUntilIdle()
         repository.startTimer()
         testScheduler.runCurrent()
-        advanceTimeBy(2000)
+        advanceTimeBy(2000.milliseconds)
 
         repository.pauseTimer()
         testScheduler.runCurrent()
@@ -456,8 +455,8 @@ class TimerRepositoryTest {
         repository.startTimer()
         testScheduler.runCurrent()
 
-        // Fast forward 1 minute
-        advanceTimeBy(60_000)
+        // Fast-forward 1 minute
+        advanceTimeBy(60_000.milliseconds)
 
         // Add 5 minutes
         repository.addTime(300)

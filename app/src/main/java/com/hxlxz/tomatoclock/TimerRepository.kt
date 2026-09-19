@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class TimerRepository @Inject constructor(
@@ -158,7 +159,7 @@ class TimerRepository @Inject constructor(
                 }
                 // 使用 ceiling 确保不到最后一秒不显示 0
                 _timeRemaining.value = (remainingMs + 999L) / 1000L 
-                delay(200) // update UI frequently enough, no drift because of absolute time anchor
+                delay(200.milliseconds) // update UI frequently enough, no drift because of absolute time anchor
             }
         }
     }
