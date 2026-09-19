@@ -4,8 +4,12 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+
+private const val TAG = "AndroidAlarmScheduler"
 
 class AndroidAlarmScheduler @Inject constructor(
     @ApplicationContext private val context: Context
@@ -24,11 +28,23 @@ class AndroidAlarmScheduler @Inject constructor(
     override fun scheduleAlarm(triggerAtMillis: Long) {
         try {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+            // Android 12+ 要求检查运行时精确闹钟权限（用户可能在系统设置中撤销）
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                Log.w(TAG, "SCHEDULE_EXACT_ALARM permission not granted by user. " +
+                    "Timer will still run via coroutine, but screen wake-up alarm won't fire. " +
+                    "User should grant permission in System Settings > Special App Access > Alarms & Reminders.")
+                return
+            }
+
             val pendingIntent = getAlarmPendingIntent()
             val info = AlarmManager.AlarmClockInfo(triggerAtMillis, pendingIntent)
             alarmManager.setAlarmClock(info, pendingIntent)
+            Log.d(TAG, "Exact alarm scheduled for ${triggerAtMillis}ms (elapsedRealtime)")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException: Cannot schedule exact alarm. Permission may have been revoked.", e)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Unexpected error while scheduling alarm.", e)
         }
     }
 
@@ -36,8 +52,9 @@ class AndroidAlarmScheduler @Inject constructor(
         try {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             alarmManager.cancel(getAlarmPendingIntent())
+            Log.d(TAG, "Exact alarm cancelled.")
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Unexpected error while cancelling alarm.", e)
         }
     }
 }

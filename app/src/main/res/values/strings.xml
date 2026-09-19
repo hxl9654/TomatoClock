@@ -31,6 +31,7 @@
     
     <!-- Settings -->
     <string name="settings_title">设置</string>
+    <string name="navigate_back">返回</string>
     <string name="settings_durations">时长设置（分钟）</string>
     <string name="settings_focus_time">专注时长</string>
     <string name="settings_short_break">短休息时长</string>

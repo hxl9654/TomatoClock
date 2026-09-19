@@ -59,11 +59,15 @@ class AlarmPlayer @Inject constructor(
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                             .build()
                     )
-                    isLooping = true // Let it loop for all modes, we'll stop it manually
+                    if (alertMode == AlertMode.SINGLE_SOUND) {
+                        // 单次提示音：播放完整音频后自然停止，不循环不截断
+                        isLooping = false
+                        setOnCompletionListener { stop() }
+                    } else {
+                        // 持续铃声（SOUND_AND_VIBRATE / SOUND_ONLY）：循环直到手动停止
+                        isLooping = true
+                    }
                     start()
-                }
-                if (alertMode == AlertMode.SINGLE_SOUND) {
-                    handler.postDelayed(stopRunnable, 2000L)
                 }
             } catch (e: Exception) {
                 Log.e("AlarmPlayer", "Error: ${e.message}", e)

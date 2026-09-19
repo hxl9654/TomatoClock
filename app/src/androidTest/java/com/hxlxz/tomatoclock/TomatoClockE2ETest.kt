@@ -12,7 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -48,26 +48,22 @@ class TomatoClockE2ETest {
     }
 
     @Before
-    fun setup() {
+    fun setup() = runTest {
         hiltRule.inject()
         // Speed up the timer for testing: 1 minute configured in UI = 1 second in real time
         timeConfig.multiplier = 1L
         
         dataStore = SettingsDataStore(ApplicationProvider.getApplicationContext())
-        runBlocking {
-            dataStore.saveFocusTime(3) // 3 seconds real time
-            dataStore.saveShortBreakTime(2) // 2 seconds real time
-            dataStore.saveAutoStartBreak(true)
-        }
+        dataStore.saveFocusTime(3) // 3 seconds real time
+        dataStore.saveShortBreakTime(2) // 2 seconds real time
+        dataStore.saveAutoStartBreak(true)
     }
 
     @After
-    fun teardown() {
+    fun teardown() = runTest {
         // Restore time multiplier
         timeConfig.multiplier = 60L
-        runBlocking {
-            ApplicationProvider.getApplicationContext<android.content.Context>().dataStore.edit { it.clear() }
-        }
+        ApplicationProvider.getApplicationContext<android.content.Context>().dataStore.edit { it.clear() }
     }
 
     @Test
@@ -125,11 +121,10 @@ class TomatoClockE2ETest {
     }
 
     @Test
-    fun testManualTransitionAndSnoozeFlow() {
-        runBlocking {
-            dataStore.saveAutoStartBreak(false)
-            dataStore.saveSnoozeTime(2) // 2 seconds snooze
-        }
+    fun testManualTransitionAndSnoozeFlow() = runTest {
+        dataStore.saveAutoStartBreak(false)
+        dataStore.saveSnoozeTime(2) // 2 seconds snooze
+        
         
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
@@ -166,13 +161,11 @@ class TomatoClockE2ETest {
     }
 
     @Test
-    fun testLongBreakFlow() {
-        runBlocking {
-            dataStore.saveAutoStartBreak(true)
-            dataStore.saveAutoStartFocus(true)
-            dataStore.saveCycles(2)
-            dataStore.saveLongBreakTime(4)
-        }
+    fun testLongBreakFlow() = runTest {
+        dataStore.saveAutoStartBreak(true)
+        dataStore.saveAutoStartFocus(true)
+        dataStore.saveCycles(2)
+        dataStore.saveLongBreakTime(4)
         
         composeTestRule.waitForIdle()
         // Wait until datastore propagation reflects in UI (cycles = 2)

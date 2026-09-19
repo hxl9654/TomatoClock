@@ -28,6 +28,7 @@ object DataModule {
     }
 
     @Provides
+    @Singleton
     fun provideCoroutineDispatcher(): kotlinx.coroutines.CoroutineDispatcher {
         return kotlinx.coroutines.Dispatchers.IO
     }

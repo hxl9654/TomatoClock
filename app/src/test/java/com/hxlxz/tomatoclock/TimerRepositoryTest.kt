@@ -369,4 +369,74 @@ class TimerRepositoryTest {
         testScheduler.advanceUntilIdle()
         assertEquals(3, repo.totalCycles.value)
     }
+
+    // ── forceFinishTimer 边界条件测试 ────────────────────────────────────────
+
+    @Test
+    fun `forceFinishTimer when RUNNING transitions to FINISHED and cancels alarm`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+        assertEquals(TimerState.RUNNING, repository.timerState.value)
+
+        repository.forceFinishTimer()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(TimerState.FINISHED, repository.timerState.value)
+        assertEquals(0L, repository.timeRemaining.value)
+        // 验证 AlarmScheduler.cancelAlarm() 至少被调用一次（startCountdown + forceFinish 各一次）
+        io.mockk.verify(atLeast = 1) { mockAlarmScheduler.cancelAlarm() }
+    }
+
+    @Test
+    fun `forceFinishTimer when PAUSED does nothing`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+        repository.pauseTimer()
+        testScheduler.runCurrent()
+        assertEquals(TimerState.PAUSED, repository.timerState.value)
+
+        // 记录当前 cancelAlarm 调用次数
+        io.mockk.clearMocks(mockAlarmScheduler)
+
+        repository.forceFinishTimer()
+        testScheduler.advanceUntilIdle()
+
+        // PAUSED 状态下 forceFinishTimer 应无效，状态不变
+        assertEquals(TimerState.PAUSED, repository.timerState.value)
+        io.mockk.verify(exactly = 0) { mockAlarmScheduler.scheduleAlarm(any()) }
+    }
+
+    @Test
+    fun `forceFinishTimer when IDLE does nothing`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        assertEquals(TimerState.IDLE, repository.timerState.value)
+
+        io.mockk.clearMocks(mockAlarmScheduler)
+
+        repository.forceFinishTimer()
+        testScheduler.advanceUntilIdle()
+
+        // IDLE 状态下 forceFinishTimer 应无效
+        assertEquals(TimerState.IDLE, repository.timerState.value)
+        io.mockk.verify(exactly = 0) { mockAlarmScheduler.scheduleAlarm(any()) }
+    }
+
+    @Test
+    fun `forceFinishTimer is idempotent when called twice on RUNNING`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+
+        repository.forceFinishTimer()
+        testScheduler.advanceUntilIdle()
+        assertEquals(TimerState.FINISHED, repository.timerState.value)
+
+        // 第二次调用：FINISHED 状态下，不应再次触发
+        repository.forceFinishTimer()
+        testScheduler.advanceUntilIdle()
+        // 状态仍是 FINISHED，不会重复迁移
+        assertEquals(TimerState.FINISHED, repository.timerState.value)
+    }
 }

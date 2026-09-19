@@ -119,4 +119,38 @@ class SettingsDataStoreTest {
         dataStore.saveCycles(100)
         assertEquals(10, dataStore.cyclesFlow.first())
     }
+
+    @Test
+    fun `save alertMode clamps to valid enum range`() = runTest {
+        // 有效边界值
+        dataStore.saveAlertMode(0)
+        assertEquals(0, dataStore.alertModeFlow.first())
+
+        dataStore.saveAlertMode(4) // AlertMode.SILENT
+        assertEquals(4, dataStore.alertModeFlow.first())
+
+        // 越界值应被截断到最近有效值
+        dataStore.saveAlertMode(-1)
+        assertEquals(0, dataStore.alertModeFlow.first())
+
+        dataStore.saveAlertMode(99)
+        assertEquals(4, dataStore.alertModeFlow.first()) // 截断到 AlertMode.entries.size - 1 = 4
+    }
+
+    @Test
+    fun `save ringtone clamps to valid enum range`() = runTest {
+        // 有效边界值
+        dataStore.saveRingtone(0)
+        assertEquals(0, dataStore.ringtoneFlow.first())
+
+        dataStore.saveRingtone(4) // Ringtone.NATURE_WOOD
+        assertEquals(4, dataStore.ringtoneFlow.first())
+
+        // 越界值应被截断
+        dataStore.saveRingtone(-1)
+        assertEquals(0, dataStore.ringtoneFlow.first())
+
+        dataStore.saveRingtone(100)
+        assertEquals(4, dataStore.ringtoneFlow.first()) // 截断到 Ringtone.entries.size - 1 = 4
+    }
 }

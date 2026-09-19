@@ -107,13 +107,15 @@ class SettingsDataStore(private val context: Context) {
     
     suspend fun saveAlertMode(mode: Int) {
         context.dataStore.edit { preferences ->
-            preferences[ALERT_MODE] = mode
+            // 校验范围: 0 (SOUND_AND_VIBRATE) ~ 4 (SILENT)，与 AlertMode 枚举值对应
+            preferences[ALERT_MODE] = mode.coerceIn(0, AlertMode.entries.size - 1)
         }
     }
     
     suspend fun saveRingtone(ringtone: Int) {
         context.dataStore.edit { preferences ->
-            preferences[RINGTONE] = ringtone
+            // 校验范围: 0 (DIGITAL) ~ 4 (NATURE_WOOD)，与 Ringtone 枚举值对应
+            preferences[RINGTONE] = ringtone.coerceIn(0, Ringtone.entries.size - 1)
         }
     }
     

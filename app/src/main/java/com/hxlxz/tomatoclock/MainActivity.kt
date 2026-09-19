@@ -22,11 +22,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
 import android.util.Log
 import android.view.WindowManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-
+    @Inject
+    lateinit var settingsDataStore: SettingsDataStore
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -44,15 +49,28 @@ class MainActivity : ComponentActivity() {
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else {
-            @Suppress("DEPRECATION")
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-            )
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                settingsDataStore.wakeScreenFlow.collect { wakeScreen ->
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        setShowWhenLocked(wakeScreen)
+                        setTurnScreenOn(wakeScreen)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        if (wakeScreen) {
+                            window.addFlags(
+                                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                            )
+                        } else {
+                            window.clearFlags(
+                                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                            )
+                        }
+                    }
+                }
+            }
         }
         
         setContent {

@@ -20,9 +20,14 @@ A modern Android Pomodoro Timer application built with Kotlin, Jetpack Compose, 
 *   **Dependency Injection**: Dagger Hilt
 *   **Storage**: Jetpack DataStore (Preferences)
 *   **Concurrency**: Kotlin Coroutines & Flow
+*   **Background Execution / 后台执行**:
+    *   `AlarmManager.setAlarmClock()` — 系统级精确闹钟，绕过 Doze 模式，保障深度休眠下准时触发
+    *   `TimerAlarmReceiver` — 接收系统闹钟广播，强制完成计时
+    *   `FullScreenIntent` — 在锁屏/息屏状态下弹出全屏通知唤醒用户
+    *   `PowerManager.PARTIAL_WAKE_LOCK` — 保持 CPU 在计时期间运行（已配合 AlarmManager 使用）
 *   **Testing**:
-    *   Unit Tests: JUnit 4, MockK, Coroutines Test
-    *   Snapshot Tests: Roborazzi
+    *   Unit Tests: JUnit 4, MockK, Coroutines Test, Robolectric
+    *   Snapshot Tests: Roborazzi (5 snapshots covering all states/modes)
     *   E2E/Instrumented Tests: Compose UI Test, Hilt Android Testing
 
 ## 🧪 Testing / 测试
