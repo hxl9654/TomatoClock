@@ -24,8 +24,6 @@ class SettingsViewModel @Inject constructor(
     val cyclesFlow = dataStore.cyclesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 4)
     val snoozeTimeFlow = dataStore.snoozeTimeFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5)
     
-    val autoStartBreakFlow = dataStore.autoStartBreakFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-    val autoStartFocusFlow = dataStore.autoStartFocusFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val wakeScreenFlow = dataStore.wakeScreenFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val soundModeFlow = dataStore.soundModeFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
     val vibrationModeFlow = dataStore.vibrationModeFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
@@ -50,8 +48,6 @@ class SettingsViewModel @Inject constructor(
     fun saveCycles(cycles: Int) = safeSave { dataStore.saveCycles(cycles) }
     fun saveSnoozeTime(time: Int) = safeSave { dataStore.saveSnoozeTime(time) }
     
-    fun saveAutoStartBreak(autoStart: Boolean) = safeSave { dataStore.saveAutoStartBreak(autoStart) }
-    fun saveAutoStartFocus(autoStart: Boolean) = safeSave { dataStore.saveAutoStartFocus(autoStart) }
     fun saveWakeScreen(wake: Boolean) = safeSave { dataStore.saveWakeScreen(wake) }
     fun saveSoundMode(mode: Int) = safeSave { dataStore.saveSoundMode(mode) }
     fun saveVibrationMode(mode: Int) = safeSave { dataStore.saveVibrationMode(mode) }

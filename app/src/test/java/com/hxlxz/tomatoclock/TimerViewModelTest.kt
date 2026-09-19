@@ -120,6 +120,6 @@ class TimerViewModelTest {
     @Test
     fun `test skipCurrentPhase delegates to repository forceFinishTimer`() {
         viewModel.skipCurrentPhase()
-        verify { repository.forceFinishTimer() }
+        verify { repository.forceFinishTimer(isSkipped = true, fromAlarm = false) }
     }
 }

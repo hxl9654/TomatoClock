@@ -48,8 +48,6 @@ class TimerRepository @Inject constructor(
     private val shortBreakTimeMin = settingsDataStore.shortBreakTimeFlow.stateIn(scope, SharingStarted.Eagerly, 5)
     private val longBreakTimeMin = settingsDataStore.longBreakTimeFlow.stateIn(scope, SharingStarted.Eagerly, 15)
     private val snoozeTimeMin = settingsDataStore.snoozeTimeFlow.stateIn(scope, SharingStarted.Eagerly, 5)
-    private val autoStartBreak = settingsDataStore.autoStartBreakFlow.stateIn(scope, SharingStarted.Eagerly, false)
-    private val autoStartFocus = settingsDataStore.autoStartFocusFlow.stateIn(scope, SharingStarted.Eagerly, false)
 
     private var timerJob: Job? = null
     
@@ -184,20 +182,11 @@ class TimerRepository @Inject constructor(
         _totalTimeInSeconds.value = initialTime
     }
 
-    private fun onTimerFinished() {
+    private fun onTimerFinished(isSkipped: Boolean = false) {
         alarmScheduler.cancelAlarm()
-        _suppressAlarm.value = false // 正常完成，允许响铃
+        _suppressAlarm.value = isSkipped // 正常完成允许响铃，手动跳过则静音
         _timerState.value = TimerState.FINISHED
         // The AlarmPlayer logic will be handled by TimerService reacting to state change
-        
-        val autoBreak = autoStartBreak.value
-        val autoFocus = autoStartFocus.value
-        
-        if (_timerMode.value == TimerMode.FOCUS && autoBreak) {
-            nextPhase()
-        } else if (_timerMode.value != TimerMode.FOCUS && autoFocus) {
-            nextPhase()
-        }
     }
 
     fun nextPhase() {
@@ -257,7 +246,7 @@ class TimerRepository @Inject constructor(
         }
     }
 
-    fun forceFinishTimer(fromAlarm: Boolean = false) {
+    fun forceFinishTimer(fromAlarm: Boolean = false, isSkipped: Boolean = false) {
         if (_timerState.value == TimerState.RUNNING) {
             if (fromAlarm) {
                 // If this is triggered by the alarm, ensure it's not a stale alarm
@@ -270,7 +259,7 @@ class TimerRepository @Inject constructor(
             timerJob?.cancel()
             alarmScheduler.cancelAlarm()
             _timeRemaining.value = 0
-            onTimerFinished()
+            onTimerFinished(isSkipped)
         }
     }
     

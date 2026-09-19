@@ -29,9 +29,7 @@ class SettingsDataStore(private val context: Context) {
         val WAKE_SCREEN = androidx.datastore.preferences.core.booleanPreferencesKey("wake_screen")
         val FLASH_SCREEN = androidx.datastore.preferences.core.booleanPreferencesKey("flash_screen")
         
-        // Auto Transition Settings
-        val AUTO_START_BREAK = androidx.datastore.preferences.core.booleanPreferencesKey("auto_start_break")
-        val AUTO_START_FOCUS = androidx.datastore.preferences.core.booleanPreferencesKey("auto_start_focus")
+        // Auto Transition Settings removed
         
         // Timer State Persistence
         val TIMER_STATE = stringPreferencesKey("timer_state")
@@ -100,14 +98,6 @@ class SettingsDataStore(private val context: Context) {
     val flashScreenFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[FLASH_SCREEN] ?: true // Default to flashing screen
     }
-    
-    val autoStartBreakFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[AUTO_START_BREAK] ?: false
-    }
-    
-    val autoStartFocusFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[AUTO_START_FOCUS] ?: false
-    }
 
     suspend fun saveFocusTime(minutes: Int) {
         context.dataStore.edit { preferences ->
@@ -167,18 +157,6 @@ class SettingsDataStore(private val context: Context) {
     suspend fun saveFlashScreen(flash: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[FLASH_SCREEN] = flash
-        }
-    }
-    
-    suspend fun saveAutoStartBreak(autoStart: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[AUTO_START_BREAK] = autoStart
-        }
-    }
-    
-    suspend fun saveAutoStartFocus(autoStart: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[AUTO_START_FOCUS] = autoStart
         }
     }
     

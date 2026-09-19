@@ -56,7 +56,6 @@ class TomatoClockE2ETest {
         dataStore = SettingsDataStore(ApplicationProvider.getApplicationContext())
         dataStore.saveFocusTime(3) // 3 seconds real time
         dataStore.saveShortBreakTime(2) // 2 seconds real time
-        dataStore.saveAutoStartBreak(true)
     }
 
     @After
@@ -83,10 +82,14 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("停止").assertIsDisplayed()
 
         // 3. Let the timer run to completion (wait 4 seconds max)
-        waitUntilTextExists("短休息")
+        waitUntilTextExists("开始下个阶段")
         composeTestRule.waitForIdle()
 
-        // 4. Verify it auto-transitioned to Break (since autoStartBreak is true)
+        // 4. Verify we are now in FINISHED state where we can click "开始下个阶段"
+        composeTestRule.onNodeWithText("开始下个阶段").assertIsDisplayed()
+        composeTestRule.onNodeWithText("开始下个阶段").performClick()
+        composeTestRule.waitForIdle()
+
         composeTestRule.onNodeWithText("短休息").assertIsDisplayed()
 
         // 5. Test Pause functionality during break
@@ -122,7 +125,6 @@ class TomatoClockE2ETest {
 
     @Test
     fun testManualTransitionAndSnoozeFlow() = runTest {
-        dataStore.saveAutoStartBreak(false)
         dataStore.saveSnoozeTime(2) // 2 seconds snooze
         
         
@@ -136,7 +138,7 @@ class TomatoClockE2ETest {
         waitUntilTextExists("开始下个阶段")
         composeTestRule.waitForIdle()
 
-        // Since autoStartBreak=false, we should see "开始下个阶段" and "推迟提醒"
+        // We should see "开始下个阶段" and "推迟提醒"
         composeTestRule.onNodeWithText("开始下个阶段").assertIsDisplayed()
         composeTestRule.onNodeWithText("推迟提醒").assertIsDisplayed()
 
@@ -162,8 +164,6 @@ class TomatoClockE2ETest {
 
     @Test
     fun testLongBreakFlow() = runTest {
-        dataStore.saveAutoStartBreak(true)
-        dataStore.saveAutoStartFocus(true)
         dataStore.saveCycles(2)
         dataStore.saveLongBreakTime(4)
         
@@ -174,21 +174,30 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("开始").performClick()
         
         // Cycle 1: Focus (initialized as 3s from @Before)
-        waitUntilTextExists("短休息")
+        waitUntilTextExists("开始下个阶段")
         composeTestRule.waitForIdle()
 
-        // Should auto-transition to SHORT_BREAK (2s from @Before)
+        composeTestRule.onNodeWithText("开始下个阶段").performClick()
+        composeTestRule.waitForIdle()
+
+        // Should transition to SHORT_BREAK (2s from @Before)
         composeTestRule.onNodeWithText("短休息").assertIsDisplayed()
         
         // Wait for Short break to finish (2s)
-        waitUntilTextExists("专注中")
+        waitUntilTextExists("开始下个阶段")
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("开始下个阶段").performClick()
         composeTestRule.waitForIdle()
 
         // Cycle 2: Focus (reads 3s again)
         composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
         
         // Wait for Focus to finish (3s)
-        waitUntilTextExists("长休息")
+        waitUntilTextExists("开始下个阶段")
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("开始下个阶段").performClick()
         composeTestRule.waitForIdle()
 
         // Because cycles = 2, we should now be in LONG_BREAK
@@ -205,12 +214,7 @@ class TomatoClockE2ETest {
         
         // Find Sound Mode label
         composeTestRule.onNodeWithText("铃声模式").performScrollTo().assertIsDisplayed()
-        
-        // Click the dropdown (the default value should be 持续响铃)
-        composeTestRule.onNodeWithText("持续响铃").performScrollTo().performClick()
-        composeTestRule.waitForIdle()
-        
-        // Select "响铃一次"
+        // Select "响铃一次" (directly visible as SegmentedButton)
         composeTestRule.onNodeWithText("响铃一次").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         
@@ -220,11 +224,7 @@ class TomatoClockE2ETest {
         // Find Vibration Mode label
         composeTestRule.onNodeWithText("震动模式").performScrollTo().assertIsDisplayed()
         
-        // Click the dropdown (the default value should be 持续震动)
-        composeTestRule.onNodeWithText("持续震动").performScrollTo().performClick()
-        composeTestRule.waitForIdle()
-        
-        // Select "震动一次"
+        // Select "震动一次" (directly visible as SegmentedButton)
         composeTestRule.onNodeWithText("震动一次").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         

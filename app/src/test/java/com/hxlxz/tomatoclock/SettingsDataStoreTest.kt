@@ -43,8 +43,6 @@ class SettingsDataStoreTest {
         assertEquals(0, dataStore.soundModeFlow.first())
         assertEquals(0, dataStore.vibrationModeFlow.first())
         assertEquals(true, dataStore.wakeScreenFlow.first())
-        assertEquals(false, dataStore.autoStartBreakFlow.first())
-        assertEquals(false, dataStore.autoStartFocusFlow.first())
     }
 
     @Test
@@ -93,18 +91,6 @@ class SettingsDataStoreTest {
     fun `save and read wake screen`() = runTest {
         dataStore.saveWakeScreen(false)
         assertEquals(false, dataStore.wakeScreenFlow.first())
-    }
-
-    @Test
-    fun `save and read auto start break`() = runTest {
-        dataStore.saveAutoStartBreak(true)
-        assertEquals(true, dataStore.autoStartBreakFlow.first())
-    }
-
-    @Test
-    fun `save and read auto start focus`() = runTest {
-        dataStore.saveAutoStartFocus(true)
-        assertEquals(true, dataStore.autoStartFocusFlow.first())
     }
 
     @Test

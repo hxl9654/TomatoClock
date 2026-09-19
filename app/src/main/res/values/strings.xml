@@ -41,8 +41,6 @@
     <string name="settings_cycles">长休息前循环次数</string>
     <string name="settings_snooze_time">推迟提醒时长（分钟）</string>
     <string name="settings_behavior">行为与提醒</string>
-    <string name="settings_auto_break">自动开始休息</string>
-    <string name="settings_auto_focus">自动开始专注</string>
     <string name="settings_wake_screen">倒计时结束时点亮屏幕</string>
     <string name="settings_flash_screen">结束时界面呼吸闪烁</string>
     <string name="settings_sound_mode">铃声模式</string>

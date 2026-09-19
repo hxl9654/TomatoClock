@@ -10,7 +10,7 @@ A modern Android Pomodoro Timer application built with Kotlin, Jetpack Compose, 
 *   **Independent Notifications (独立通知设置)**: Separately configure Sound Mode and Vibration Mode. (独立配置铃声与震动模式，支持持续、单次或关闭)
 *   **Cycles (循环)**: Automatically track your pomodoro cycles and trigger a long break after a set number of focuses.
 *   **Real-time Settings Sync (设置实时同步)**: Home screen instantly reflects changes made in Settings while the timer is idle.
-*   **Auto-Transitions (自动流转)**: Optional settings to automatically start breaks or focus sessions.
+
 *   **Postpone Reminder (推迟提醒)**: Postpone a completed session to continue for a few more minutes.
 *   **Data Persistence (数据持久化)**: Settings are saved using Android DataStore.
 *   **Pure Chinese UI (纯中文界面)**: The user interface is completely in Simplified Chinese.

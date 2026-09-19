@@ -46,8 +46,6 @@ class TimerRepositoryTest {
         coEvery { mockDataStore.longBreakTimeFlow } returns flowOf(15)
         coEvery { mockDataStore.cyclesFlow } returns flowOf(4)
         coEvery { mockDataStore.snoozeTimeFlow } returns flowOf(5)
-        coEvery { mockDataStore.autoStartBreakFlow } returns flowOf(false)
-        coEvery { mockDataStore.autoStartFocusFlow } returns flowOf(false)
         coEvery { mockDataStore.savedTimerStateFlow } returns flowOf(null)
 
         val timeConfig = TimeConfig()
@@ -135,7 +133,7 @@ class TimerRepositoryTest {
         // Move to SHORT_BREAK first
         repository.nextPhase()
         testScheduler.runCurrent()
-        
+
         repository.stopTimer()
         testScheduler.advanceUntilIdle()
 
@@ -159,10 +157,10 @@ class TimerRepositoryTest {
         // Let it finish
         repository.startTimer()
         advanceTimeBy(25 * 60 * 1000L + 1000)
-        
+
         repository.snooze()
         testScheduler.runCurrent()
-        
+
         repository.timerState.test {
             assertEquals(TimerState.RUNNING, awaitItem())
         }
@@ -172,82 +170,50 @@ class TimerRepositoryTest {
     }
 
     @Test
-    fun `onTimerFinished auto-starts next phase when enabled`() = runTest(testDispatcher) {
-        coEvery { mockDataStore.autoStartBreakFlow } returns flowOf(true)
-        val repoWithAutoStart = TimerRepository(mockDataStore, TimeConfig(), CoroutineScope(SupervisorJob() + testDispatcher), mockAlarmScheduler)
-        testScheduler.advanceUntilIdle()
-        
-        repoWithAutoStart.startTimer()
-        advanceTimeBy(25 * 60 * 1000L + 1000)
-        
-        repoWithAutoStart.timerMode.test {
-            assertEquals(TimerMode.SHORT_BREAK, awaitItem())
-        }
-        repoWithAutoStart.timerState.test {
-            assertEquals(TimerState.RUNNING, awaitItem())
-        }
-    }
-
-    @Test
-    fun `onTimerFinished stays finished when auto-start is disabled`() = runTest(testDispatcher) {
-        testScheduler.advanceUntilIdle()
-        
-        repository.startTimer()
-        advanceTimeBy(25 * 60 * 1000L + 1000)
-        
-        repository.timerState.test {
-            assertEquals(TimerState.FINISHED, awaitItem())
-        }
-        repository.timerMode.test {
-            assertEquals(TimerMode.FOCUS, awaitItem())
-        }
-    }
-
-    @Test
     fun `full pomodoro cycle transitions correctly`() = runTest(testDispatcher) {
         testScheduler.advanceUntilIdle()
-        
+
         // Cycle 1: Focus
         assertEquals(TimerMode.FOCUS, repository.timerMode.value)
         repository.nextPhase()
         testScheduler.runCurrent()
-        
+
         // Cycle 1: Short Break
         assertEquals(TimerMode.SHORT_BREAK, repository.timerMode.value)
         repository.nextPhase()
         testScheduler.runCurrent()
-        
+
         // Cycle 2: Focus
         assertEquals(2, repository.currentCycle.value)
         assertEquals(TimerMode.FOCUS, repository.timerMode.value)
         repository.nextPhase()
         testScheduler.runCurrent()
-        
+
         // Cycle 2: Short Break
         assertEquals(TimerMode.SHORT_BREAK, repository.timerMode.value)
         repository.nextPhase()
         testScheduler.runCurrent()
-        
+
         // Cycle 3: Focus
         assertEquals(3, repository.currentCycle.value)
         repository.nextPhase()
         testScheduler.runCurrent()
-        
+
         // Cycle 3: Short Break
         repository.nextPhase()
         testScheduler.runCurrent()
-        
+
         // Cycle 4: Focus
         assertEquals(4, repository.currentCycle.value)
         assertEquals(TimerMode.FOCUS, repository.timerMode.value)
         repository.nextPhase()
         testScheduler.runCurrent()
-        
+
         // Cycle 4: Long Break (because cycle reaches 4)
         assertEquals(TimerMode.LONG_BREAK, repository.timerMode.value)
         repository.nextPhase()
         testScheduler.runCurrent()
-        
+
         // Cycle 1: Focus again (reset)
         assertEquals(1, repository.currentCycle.value)
         assertEquals(TimerMode.FOCUS, repository.timerMode.value)
@@ -328,7 +294,7 @@ class TimerRepositoryTest {
         repo.startTimer()
         testScheduler.runCurrent()
         assertEquals(TimerState.RUNNING, repo.timerState.value)
-        
+
         io.mockk.verify { mockAlarmScheduler.scheduleAlarm(any()) }
 
         val timeBeforeChange = repo.timeRemaining.value
@@ -446,14 +412,14 @@ class TimerRepositoryTest {
         testScheduler.advanceUntilIdle()
         repository.startTimer()
         testScheduler.runCurrent()
-        
+
         val initialTotal = repository.totalTimeInSeconds.value
         val initialRemaining = repository.timeRemaining.value
-        
+
         // Add 5 minutes (300 seconds)
         repository.addTime(300)
         testScheduler.runCurrent()
-        
+
         assertEquals(initialTotal + 300, repository.totalTimeInSeconds.value)
         assertEquals(initialRemaining + 300, repository.timeRemaining.value)
         io.mockk.verify(atLeast = 1) { mockAlarmScheduler.scheduleAlarm(any()) }
@@ -465,19 +431,19 @@ class TimerRepositoryTest {
         repository.startTimer()
         testScheduler.runCurrent()
         advanceTimeBy(2000)
-        
+
         repository.pauseTimer()
         testScheduler.runCurrent()
-        
+
         val timeBeforeAdd = repository.timeRemaining.value
         val totalBeforeAdd = repository.totalTimeInSeconds.value
-        
+
         repository.addTime(300)
         testScheduler.runCurrent()
-        
+
         assertEquals(timeBeforeAdd + 300, repository.timeRemaining.value)
         assertEquals(totalBeforeAdd + 300, repository.totalTimeInSeconds.value)
-        
+
         // Resume to ensure the added time is carried over
         repository.startTimer()
         testScheduler.runCurrent()
@@ -492,7 +458,7 @@ class TimerRepositoryTest {
 
         // Fast forward 1 minute
         advanceTimeBy(60_000)
-        
+
         // Add 5 minutes
         repository.addTime(300)
         testScheduler.runCurrent()
@@ -502,7 +468,7 @@ class TimerRepositoryTest {
         // A stale alarm fires, meaning now < targetEndTimeMs - 2000L.
         repository.forceFinishTimer(fromAlarm = true)
         testScheduler.runCurrent()
-        
+
         // Timer should STILL be RUNNING because the stale alarm was ignored
         assertEquals(TimerState.RUNNING, repository.timerState.value)
     }
@@ -521,8 +487,13 @@ class TimerRepositoryTest {
             lastSavedTimestamp = oldTimestamp
         )
         coEvery { mockDataStore.savedTimerStateFlow } returns kotlinx.coroutines.flow.flowOf(savedState)
-        
-        val repo = TimerRepository(mockDataStore, TimeConfig(), CoroutineScope(SupervisorJob() + testDispatcher), mockAlarmScheduler)
+
+        val repo = TimerRepository(
+            mockDataStore,
+            TimeConfig(),
+            CoroutineScope(SupervisorJob() + testDispatcher),
+            mockAlarmScheduler
+        )
         testScheduler.advanceUntilIdle()
 
         // 超过一小时应该调用 clearTimerState 并且状态保持 IDLE 默认值
@@ -544,8 +515,13 @@ class TimerRepositoryTest {
             lastSavedTimestamp = now - 5000L // Saved 5 seconds ago
         )
         coEvery { mockDataStore.savedTimerStateFlow } returns kotlinx.coroutines.flow.flowOf(savedState)
-        
-        val repo = TimerRepository(mockDataStore, TimeConfig(), CoroutineScope(SupervisorJob() + testDispatcher), mockAlarmScheduler)
+
+        val repo = TimerRepository(
+            mockDataStore,
+            TimeConfig(),
+            CoroutineScope(SupervisorJob() + testDispatcher),
+            mockAlarmScheduler
+        )
         testScheduler.runCurrent()
 
         assertEquals(TimerState.RUNNING, repo.timerState.value)
@@ -553,67 +529,82 @@ class TimerRepositoryTest {
         assertEquals(3, repo.currentCycle.value)
         assertEquals(false, repo.suppressAlarm.value)
         // Approx 120 seconds
-        org.junit.Assert.assertTrue("Expected time around 120, but was ${repo.timeRemaining.value}", repo.timeRemaining.value in 110L..125L)
+        org.junit.Assert.assertTrue(
+            "Expected time around 120, but was ${repo.timeRemaining.value}",
+            repo.timeRemaining.value in 110L..125L
+        )
     }
 
     @Test
-    fun `restore state finishes and rings if target time is in the past by less than 10 mins`() = runTest(testDispatcher) {
-        val now = System.currentTimeMillis()
-        val pastTime = now - 5 * 60 * 1000L // 5 minutes ago
-        val savedState = SavedTimerState(
-            state = TimerState.RUNNING,
-            mode = TimerMode.FOCUS,
-            targetEndTimeWallClock = pastTime,
-            pausedTimeRemaining = 0L,
-            currentCycle = 1,
-            lastSavedTimestamp = now - 30 * 60 * 1000L // Saved 30 mins ago
-        )
-        coEvery { mockDataStore.savedTimerStateFlow } returns kotlinx.coroutines.flow.flowOf(savedState)
-        
-        val repo = TimerRepository(mockDataStore, TimeConfig(), CoroutineScope(SupervisorJob() + testDispatcher), mockAlarmScheduler)
-        testScheduler.advanceUntilIdle()
+    fun `restore state finishes and rings if target time is in the past by less than 10 mins`() =
+        runTest(testDispatcher) {
+            val now = System.currentTimeMillis()
+            val pastTime = now - 5 * 60 * 1000L // 5 minutes ago
+            val savedState = SavedTimerState(
+                state = TimerState.RUNNING,
+                mode = TimerMode.FOCUS,
+                targetEndTimeWallClock = pastTime,
+                pausedTimeRemaining = 0L,
+                currentCycle = 1,
+                lastSavedTimestamp = now - 30 * 60 * 1000L // Saved 30 mins ago
+            )
+            coEvery { mockDataStore.savedTimerStateFlow } returns kotlinx.coroutines.flow.flowOf(savedState)
 
-        assertEquals(TimerState.FINISHED, repo.timerState.value)
-        assertEquals(0L, repo.timeRemaining.value)
-        assertEquals(false, repo.suppressAlarm.value) // 不超过10分钟，正常补发提醒
-    }
+            val repo = TimerRepository(
+                mockDataStore,
+                TimeConfig(),
+                CoroutineScope(SupervisorJob() + testDispatcher),
+                mockAlarmScheduler
+            )
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(TimerState.FINISHED, repo.timerState.value)
+            assertEquals(0L, repo.timeRemaining.value)
+            assertEquals(false, repo.suppressAlarm.value) // 不超过10分钟，正常补发提醒
+        }
 
     @Test
-    fun `restore state finishes silently if target time is in the past by more than 10 mins`() = runTest(testDispatcher) {
-        val now = System.currentTimeMillis()
-        val pastTime = now - 15 * 60 * 1000L // 15 minutes ago
-        val savedState = SavedTimerState(
-            state = TimerState.RUNNING,
-            mode = TimerMode.FOCUS,
-            targetEndTimeWallClock = pastTime,
-            pausedTimeRemaining = 0L,
-            currentCycle = 1,
-            lastSavedTimestamp = now - 40 * 60 * 1000L // Saved 40 mins ago
-        )
-        coEvery { mockDataStore.savedTimerStateFlow } returns kotlinx.coroutines.flow.flowOf(savedState)
-        
-        val repo = TimerRepository(mockDataStore, TimeConfig(), CoroutineScope(SupervisorJob() + testDispatcher), mockAlarmScheduler)
-        testScheduler.advanceUntilIdle()
+    fun `restore state finishes silently if target time is in the past by more than 10 mins`() =
+        runTest(testDispatcher) {
+            val now = System.currentTimeMillis()
+            val pastTime = now - 15 * 60 * 1000L // 15 minutes ago
+            val savedState = SavedTimerState(
+                state = TimerState.RUNNING,
+                mode = TimerMode.FOCUS,
+                targetEndTimeWallClock = pastTime,
+                pausedTimeRemaining = 0L,
+                currentCycle = 1,
+                lastSavedTimestamp = now - 40 * 60 * 1000L // Saved 40 mins ago
+            )
+            coEvery { mockDataStore.savedTimerStateFlow } returns kotlinx.coroutines.flow.flowOf(savedState)
 
-        assertEquals(TimerState.FINISHED, repo.timerState.value)
-        assertEquals(0L, repo.timeRemaining.value)
-        assertEquals(true, repo.suppressAlarm.value) // 超过10分钟，强制静音
-    }
+            val repo = TimerRepository(
+                mockDataStore,
+                TimeConfig(),
+                CoroutineScope(SupervisorJob() + testDispatcher),
+                mockAlarmScheduler
+            )
+            testScheduler.advanceUntilIdle()
+
+            assertEquals(TimerState.FINISHED, repo.timerState.value)
+            assertEquals(0L, repo.timeRemaining.value)
+            assertEquals(true, repo.suppressAlarm.value) // 超过10分钟，强制静音
+        }
 
     @Test
     fun `saveCurrentState persists correct values`() = runTest(testDispatcher) {
         testScheduler.advanceUntilIdle()
         repository.startTimer()
         testScheduler.runCurrent()
-        
+
         repository.saveCurrentState()
-        
+
         io.mockk.coVerify {
             mockDataStore.saveTimerState(match {
                 it.state == TimerState.RUNNING &&
-                it.mode == TimerMode.FOCUS &&
-                it.currentCycle == 1 &&
-                it.targetEndTimeWallClock > System.currentTimeMillis()
+                        it.mode == TimerMode.FOCUS &&
+                        it.currentCycle == 1 &&
+                        it.targetEndTimeWallClock > System.currentTimeMillis()
             })
         }
     }

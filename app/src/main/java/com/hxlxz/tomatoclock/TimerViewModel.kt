@@ -35,7 +35,7 @@ class TimerViewModel @Inject constructor(
     }
     
     fun skipCurrentPhase() {
-        repository.forceFinishTimer()
+        repository.forceFinishTimer(isSkipped = true)
     }
 }
 

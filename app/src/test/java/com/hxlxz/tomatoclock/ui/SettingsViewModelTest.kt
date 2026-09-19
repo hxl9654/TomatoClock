@@ -57,8 +57,6 @@ class SettingsViewModelTest {
         viewModel.saveLongBreakTime(20)
         viewModel.saveCycles(5)
         viewModel.saveSnoozeTime(8)
-        viewModel.saveAutoStartBreak(true)
-        viewModel.saveAutoStartFocus(true)
         viewModel.saveWakeScreen(false)
         viewModel.saveSoundMode(1)
         viewModel.saveVibrationMode(2)
@@ -72,8 +70,6 @@ class SettingsViewModelTest {
         coVerify(exactly = 1) { dataStore.saveLongBreakTime(20) }
         coVerify(exactly = 1) { dataStore.saveCycles(5) }
         coVerify(exactly = 1) { dataStore.saveSnoozeTime(8) }
-        coVerify(exactly = 1) { dataStore.saveAutoStartBreak(true) }
-        coVerify(exactly = 1) { dataStore.saveAutoStartFocus(true) }
         coVerify(exactly = 1) { dataStore.saveWakeScreen(false) }
         coVerify(exactly = 1) { dataStore.saveSoundMode(1) }
         coVerify(exactly = 1) { dataStore.saveVibrationMode(2) }

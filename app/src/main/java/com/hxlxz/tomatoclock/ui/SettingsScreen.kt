@@ -1,9 +1,12 @@
 package com.hxlxz.tomatoclock.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -33,8 +36,6 @@ fun SettingsScreen(
     val cycles by viewModel.cyclesFlow.collectAsStateWithLifecycle(initialValue = 4)
     val snoozeTime by viewModel.snoozeTimeFlow.collectAsStateWithLifecycle(initialValue = 5)
     
-    val autoStartBreak by viewModel.autoStartBreakFlow.collectAsStateWithLifecycle(initialValue = false)
-    val autoStartFocus by viewModel.autoStartFocusFlow.collectAsStateWithLifecycle(initialValue = false)
     val wakeScreen by viewModel.wakeScreenFlow.collectAsStateWithLifecycle(initialValue = true)
     val flashScreen by viewModel.flashScreenFlow.collectAsStateWithLifecycle(initialValue = true)
     val soundMode by viewModel.soundModeFlow.collectAsStateWithLifecycle(initialValue = 0)
@@ -111,18 +112,6 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             SwitchSetting(
-                label = stringResource(R.string.settings_auto_break),
-                checked = autoStartBreak,
-                onCheckedChange = { viewModel.saveAutoStartBreak(it) }
-            )
-
-            SwitchSetting(
-                label = stringResource(R.string.settings_auto_focus),
-                checked = autoStartFocus,
-                onCheckedChange = { viewModel.saveAutoStartFocus(it) }
-            )
-
-            SwitchSetting(
                 label = stringResource(R.string.settings_wake_screen),
                 checked = wakeScreen,
                 onCheckedChange = { viewModel.saveWakeScreen(it) }
@@ -140,7 +129,7 @@ fun SettingsScreen(
                 stringResource(R.string.sound_mode_off)
             )
             
-            DropdownSetting(
+            SegmentedButtonSetting(
                 label = stringResource(R.string.settings_sound_mode),
                 options = soundModeOptions,
                 selectedIndex = soundMode,
@@ -153,7 +142,7 @@ fun SettingsScreen(
                 stringResource(R.string.vibration_mode_off)
             )
             
-            DropdownSetting(
+            SegmentedButtonSetting(
                 label = stringResource(R.string.settings_vibration_mode),
                 options = vibrationModeOptions,
                 selectedIndex = vibrationMode,
@@ -216,7 +205,7 @@ fun NumberInputSetting(
                 Icon(Icons.Default.Remove, contentDescription = "减少")
             }
             
-            OutlinedTextField(
+            BasicTextField(
                 value = textValue,
                 onValueChange = { newValue ->
                     textValue = newValue
@@ -227,9 +216,17 @@ fun NumberInputSetting(
                     }
                 },
                 modifier = Modifier
-                    .width(80.dp)
-                    .padding(horizontal = 8.dp),
-                textStyle = LocalTextStyle.current.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+                    .width(64.dp)
+                    .padding(horizontal = 8.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(vertical = 8.dp),
+                textStyle = LocalTextStyle.current.copy(
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
                 singleLine = true,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                     keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
@@ -361,6 +358,39 @@ fun DropdownSetting(
                             }
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SegmentedButtonSetting(
+    label: String,
+    options: List<String>,
+    selectedIndex: Int,
+    onOptionSelected: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+    ) {
+        Text(
+            text = label, 
+            style = MaterialTheme.typography.bodyLarge, 
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            options.forEachIndexed { index, text ->
+                SegmentedButton(
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    onClick = { onOptionSelected(index) },
+                    selected = index == selectedIndex
+                ) {
+                    Text(text)
                 }
             }
         }
