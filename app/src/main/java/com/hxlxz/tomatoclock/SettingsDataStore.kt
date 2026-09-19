@@ -5,6 +5,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -30,6 +32,33 @@ class SettingsDataStore(private val context: Context) {
         // Auto Transition Settings
         val AUTO_START_BREAK = androidx.datastore.preferences.core.booleanPreferencesKey("auto_start_break")
         val AUTO_START_FOCUS = androidx.datastore.preferences.core.booleanPreferencesKey("auto_start_focus")
+        
+        // Timer State Persistence
+        val TIMER_STATE = stringPreferencesKey("timer_state")
+        val TIMER_MODE = stringPreferencesKey("timer_mode")
+        val TARGET_END_TIME_WALL_CLOCK = longPreferencesKey("target_end_time_wall_clock")
+        val PAUSED_TIME_REMAINING = longPreferencesKey("paused_time_remaining")
+        val CURRENT_CYCLE = intPreferencesKey("current_cycle")
+        val LAST_SAVED_TIMESTAMP = longPreferencesKey("last_saved_timestamp")
+    }
+
+    val savedTimerStateFlow: Flow<SavedTimerState?> = context.dataStore.data.map { preferences ->
+        val stateStr = preferences[TIMER_STATE]
+        val modeStr = preferences[TIMER_MODE]
+        val timestamp = preferences[LAST_SAVED_TIMESTAMP]
+        
+        if (stateStr != null && modeStr != null && timestamp != null) {
+            SavedTimerState(
+                state = TimerState.valueOf(stateStr),
+                mode = TimerMode.valueOf(modeStr),
+                targetEndTimeWallClock = preferences[TARGET_END_TIME_WALL_CLOCK] ?: 0L,
+                pausedTimeRemaining = preferences[PAUSED_TIME_REMAINING] ?: 0L,
+                currentCycle = preferences[CURRENT_CYCLE] ?: 1,
+                lastSavedTimestamp = timestamp
+            )
+        } else {
+            null
+        }
     }
 
     val focusTimeFlow: Flow<Int> = context.dataStore.data.map { preferences ->
@@ -150,6 +179,28 @@ class SettingsDataStore(private val context: Context) {
     suspend fun saveAutoStartFocus(autoStart: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[AUTO_START_FOCUS] = autoStart
+        }
+    }
+    
+    suspend fun saveTimerState(state: SavedTimerState) {
+        context.dataStore.edit { preferences ->
+            preferences[TIMER_STATE] = state.state.name
+            preferences[TIMER_MODE] = state.mode.name
+            preferences[TARGET_END_TIME_WALL_CLOCK] = state.targetEndTimeWallClock
+            preferences[PAUSED_TIME_REMAINING] = state.pausedTimeRemaining
+            preferences[CURRENT_CYCLE] = state.currentCycle
+            preferences[LAST_SAVED_TIMESTAMP] = state.lastSavedTimestamp
+        }
+    }
+    
+    suspend fun clearTimerState() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(TIMER_STATE)
+            preferences.remove(TIMER_MODE)
+            preferences.remove(TARGET_END_TIME_WALL_CLOCK)
+            preferences.remove(PAUSED_TIME_REMAINING)
+            preferences.remove(CURRENT_CYCLE)
+            preferences.remove(LAST_SAVED_TIMESTAMP)
         }
     }
 }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,6 +24,9 @@ class TimerRepository @Inject constructor(
 
     private val _timerMode = MutableStateFlow(TimerMode.FOCUS)
     val timerMode: StateFlow<TimerMode> = _timerMode.asStateFlow()
+
+    private val _suppressAlarm = MutableStateFlow(false)
+    val suppressAlarm: StateFlow<Boolean> = _suppressAlarm.asStateFlow()
 
     private val _timerState = MutableStateFlow(TimerState.IDLE)
     val timerState: StateFlow<TimerState> = _timerState.asStateFlow()
@@ -54,21 +58,70 @@ class TimerRepository @Inject constructor(
     private var pausedTimeRemainingSeconds: Long = 0L
 
     init {
-        // 持续监听专注时长设置：计时器空闲时立即更新首页显示
         scope.launch {
-            focusTimeMin.collect { focusTime ->
-                if (_timerState.value == TimerState.IDLE) {
-                    val seconds = focusTime * timeConfig.multiplier
-                    _timeRemaining.value = seconds
-                    _totalTimeInSeconds.value = seconds
+            // 1. 恢复状态 (Restore state)
+            val savedState = settingsDataStore.savedTimerStateFlow.first()
+            if (savedState != null) {
+                val now = System.currentTimeMillis()
+                // 如果超过1小时 (3,600,000 毫秒)，则丢弃状态
+                if (now - savedState.lastSavedTimestamp > 3600_000L) {
+                    settingsDataStore.clearTimerState()
+                } else {
+                    _timerMode.value = savedState.mode
+                    _currentCycle.value = savedState.currentCycle
+                    _totalTimeInSeconds.value = getInitialTimeForMode(savedState.mode)
+
+                    when (savedState.state) {
+                        TimerState.RUNNING -> {
+                            val elapsed = now - savedState.targetEndTimeWallClock
+                            if (elapsed >= 0) {
+                                // 已经到期
+                                _suppressAlarm.value = elapsed > 10 * 60 * 1000L // 超过10分钟静音
+                                _timeRemaining.value = 0
+                                _timerState.value = TimerState.FINISHED
+                            } else {
+                                // 还在运行
+                                _suppressAlarm.value = false
+                                val remainingSeconds = (-elapsed + 999L) / 1000L
+                                startCountdown(remainingSeconds)
+                            }
+                        }
+                        TimerState.PAUSED -> {
+                            _suppressAlarm.value = false
+                            pausedTimeRemainingSeconds = savedState.pausedTimeRemaining
+                            _timeRemaining.value = pausedTimeRemainingSeconds
+                            _timerState.value = TimerState.PAUSED
+                        }
+                        TimerState.FINISHED -> {
+                            _suppressAlarm.value = true // 之前就完成的，恢复时不再响铃
+                            _timeRemaining.value = 0
+                            _timerState.value = TimerState.FINISHED
+                        }
+                        TimerState.IDLE -> {
+                            _suppressAlarm.value = false
+                            val initialTime = getInitialTimeForMode(savedState.mode)
+                            _timeRemaining.value = initialTime
+                        }
+                    }
                 }
             }
-        }
 
-        // 持续监听循环次数设置：始终保持与设置同步
-        scope.launch {
-            settingsDataStore.cyclesFlow.collect { cycles ->
-                _totalCycles.value = cycles
+            // 2. 持续监听专注时长设置：计时器空闲时立即更新首页显示
+            launch {
+                focusTimeMin.collect { focusTime ->
+                    if (_timerState.value == TimerState.IDLE) {
+                        val seconds = focusTime * timeConfig.multiplier
+                        _timeRemaining.value = seconds
+                        _totalTimeInSeconds.value = seconds
+                    }
+                }
+            }
+
+            // 3. 持续监听循环次数设置：始终保持与设置同步
+            launch {
+                settingsDataStore.cyclesFlow.collect { cycles ->
+                    _totalCycles.value = cycles
+                }
             }
         }
     }
@@ -133,6 +186,7 @@ class TimerRepository @Inject constructor(
 
     private fun onTimerFinished() {
         alarmScheduler.cancelAlarm()
+        _suppressAlarm.value = false // 正常完成，允许响铃
         _timerState.value = TimerState.FINISHED
         // The AlarmPlayer logic will be handled by TimerService reacting to state change
         
@@ -218,5 +272,23 @@ class TimerRepository @Inject constructor(
             _timeRemaining.value = 0
             onTimerFinished()
         }
+    }
+    
+    suspend fun saveCurrentState() {
+        val state = _timerState.value
+        val mode = _timerMode.value
+        val targetEndTimeWallClock = if (state == TimerState.RUNNING) {
+            System.currentTimeMillis() + (targetEndTimeMs - SystemClock.elapsedRealtime())
+        } else 0L
+        
+        val savedState = SavedTimerState(
+            state = state,
+            mode = mode,
+            targetEndTimeWallClock = targetEndTimeWallClock,
+            pausedTimeRemaining = pausedTimeRemainingSeconds,
+            currentCycle = _currentCycle.value,
+            lastSavedTimestamp = System.currentTimeMillis()
+        )
+        settingsDataStore.saveTimerState(savedState)
     }
 }

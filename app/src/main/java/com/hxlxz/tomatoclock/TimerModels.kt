@@ -1,4 +1,4 @@
-﻿package com.hxlxz.tomatoclock
+package com.hxlxz.tomatoclock
 
 enum class TimerMode {
     FOCUS,
@@ -12,3 +12,12 @@ enum class TimerState {
     PAUSED,
     FINISHED
 }
+
+data class SavedTimerState(
+    val state: TimerState,
+    val mode: TimerMode,
+    val targetEndTimeWallClock: Long,
+    val pausedTimeRemaining: Long,
+    val currentCycle: Int,
+    val lastSavedTimestamp: Long
+)

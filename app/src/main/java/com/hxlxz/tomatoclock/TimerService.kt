@@ -78,12 +78,14 @@ class TimerService : Service() {
                 alarmPlayer.stop()
             }
             TimerState.FINISHED -> {
-                // Read latest settings
-                val soundMode = SoundMode.fromInt(settingsDataStore.soundModeFlow.first())
-                val vibrationMode = VibrationMode.fromInt(settingsDataStore.vibrationModeFlow.first())
-                val ringtone = Ringtone.fromInt(settingsDataStore.ringtoneFlow.first())
-                
-                alarmPlayer.play(soundMode, vibrationMode, ringtone)
+                if (!repository.suppressAlarm.value) {
+                    // Read latest settings
+                    val soundMode = SoundMode.fromInt(settingsDataStore.soundModeFlow.first())
+                    val vibrationMode = VibrationMode.fromInt(settingsDataStore.vibrationModeFlow.first())
+                    val ringtone = Ringtone.fromInt(settingsDataStore.ringtoneFlow.first())
+                    
+                    alarmPlayer.play(soundMode, vibrationMode, ringtone)
+                }
                 
                 // Release the persistent partial wake lock since we are no longer running.
                 releaseWakeLock()
