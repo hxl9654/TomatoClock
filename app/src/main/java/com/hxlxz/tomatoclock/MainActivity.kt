@@ -24,6 +24,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
 import android.util.Log
 import android.view.WindowManager
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -106,9 +107,14 @@ class MainActivity : ComponentActivity() {
         // TimerService 声明为 START_STICKY，系统会在进程复活后自动重启它。
         try {
             val serviceIntent = Intent(this, TimerService::class.java)
-            startService(serviceIntent)
+            ContextCompat.startForegroundService(this, serviceIntent)
         } catch (e: Exception) {
-            Log.e("MainActivity", "Failed to start TimerService", e)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && e is android.app.ForegroundServiceStartNotAllowedException) {
+                Log.e("MainActivity", "Foreground service start not allowed in background", e)
+                Toast.makeText(this, "无法在后台启动专注服务，请在应用内操作", Toast.LENGTH_LONG).show()
+            } else {
+                Log.e("MainActivity", "Failed to start TimerService", e)
+            }
         }
     }
 }

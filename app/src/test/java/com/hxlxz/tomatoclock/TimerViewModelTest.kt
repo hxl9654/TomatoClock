@@ -2,7 +2,7 @@ package com.hxlxz.tomatoclock
 
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
+import io.mockk.coVerify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -48,33 +49,38 @@ class TimerViewModelTest {
     }
 
     @Test
-    fun `test startTimer delegates to repository`() {
+    fun `test startTimer delegates to repository`() = runTest {
         viewModel.startTimer()
-        verify { repository.startTimer() }
+        advanceUntilIdle()
+        coVerify { repository.startTimer() }
     }
 
     @Test
-    fun `test pauseTimer delegates to repository`() {
+    fun `test pauseTimer delegates to repository`() = runTest {
         viewModel.pauseTimer()
-        verify { repository.pauseTimer() }
+        advanceUntilIdle()
+        coVerify { repository.pauseTimer() }
     }
 
     @Test
-    fun `test stopTimer delegates to repository`() {
+    fun `test stopTimer delegates to repository`() = runTest {
         viewModel.stopTimer()
-        verify { repository.stopTimer() }
+        advanceUntilIdle()
+        coVerify { repository.stopTimer() }
     }
 
     @Test
-    fun `test nextPhase delegates to repository`() {
+    fun `test nextPhase delegates to repository`() = runTest {
         viewModel.nextPhase()
-        verify { repository.nextPhase() }
+        advanceUntilIdle()
+        coVerify { repository.nextPhase() }
     }
 
     @Test
-    fun `test snooze delegates to repository`() {
+    fun `test snooze delegates to repository`() = runTest {
         viewModel.snooze()
-        verify { repository.snooze() }
+        advanceUntilIdle()
+        coVerify { repository.snooze() }
     }
 
     @Test
@@ -111,14 +117,16 @@ class TimerViewModelTest {
     }
 
     @Test
-    fun `test addFiveMinutes delegates to repository addTime with 300`() {
+    fun `test addFiveMinutes delegates to repository addTime with 300`() = runTest {
         viewModel.addFiveMinutes()
-        verify { repository.addTime(300L) }
+        advanceUntilIdle()
+        coVerify { repository.addTime(300L) }
     }
 
     @Test
-    fun `test skipCurrentPhase delegates to repository forceFinishTimer`() {
+    fun `test skipCurrentPhase delegates to repository forceFinishTimer`() = runTest {
         viewModel.skipCurrentPhase()
-        verify { repository.forceFinishTimer(isSkipped = true, fromAlarm = false) }
+        advanceUntilIdle()
+        coVerify { repository.forceFinishTimer(isSkipped = true, fromAlarm = false) }
     }
 }

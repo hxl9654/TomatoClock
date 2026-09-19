@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -14,7 +15,14 @@ class TimerAlarmReceiver : BroadcastReceiver() {
     lateinit var repository: TimerRepository
 
     override fun onReceive(context: Context, intent: Intent) {
+        val pendingResult = goAsync()
         Log.d("TimerAlarmReceiver", "Exact alarm fired! Forcing timer finish.")
-        repository.forceFinishTimer(fromAlarm = true)
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+            try {
+                repository.forceFinishTimer(fromAlarm = true)
+            } finally {
+                pendingResult?.finish()
+            }
+        }
     }
 }

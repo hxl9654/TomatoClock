@@ -9,13 +9,13 @@ import android.app.Service
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
@@ -38,8 +38,6 @@ class TimerService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var isForeground = false
-    
-    private var partialWakeLock: PowerManager.WakeLock? = null
 
     companion object {
         const val CHANNEL_ID = "tomato-clock_channel"
@@ -66,7 +64,7 @@ class TimerService : Service() {
             updateNotification(state, time, mode, wakeScreen)
         }.launchIn(serviceScope)
 
-        // Handle State Side Effects (WakeLocks, Alarms)
+        // Handle State Side Effects (Alarms)
         repository.timerState.onEach { state ->
             handleStateSideEffects(state)
         }.launchIn(serviceScope)
@@ -75,11 +73,13 @@ class TimerService : Service() {
     private suspend fun handleStateSideEffects(state: TimerState) {
         when (state) {
             TimerState.RUNNING -> {
-                acquireWakeLock()
                 alarmPlayer.stop()
             }
             TimerState.FINISHED -> {
-                if (!repository.suppressAlarm.value) {
+                // [Fix-CS-2] 在进入 withContext(IO) 之前捕获 suppressAlarm 值到局部变量，
+                // 避免挂起期间值被修改导致的竞态窗口（虽然概率极低，但属防御性编程规范）。
+                val suppress = repository.suppressAlarm.value
+                if (!suppress) {
                     // 【C-3修复】DataStore 的 Flow.first() 是 IO 操作，
                     // 不能在 Main dispatcher 下直接调用，否则可能引发 ANR。
                     val (soundMode, vibrationMode, ringtone) = withContext(Dispatchers.IO) {
@@ -91,46 +91,23 @@ class TimerService : Service() {
                     }
                     alarmPlayer.play(soundMode, vibrationMode, ringtone)
                 }
-
-                // Release the persistent partial wake lock since we are no longer running.
-                releaseWakeLock()
             }
             TimerState.PAUSED, TimerState.IDLE -> {
-                releaseWakeLock()
                 alarmPlayer.stop()
             }
         }
     }
-    
-    private fun acquireWakeLock() {
-        if (partialWakeLock == null) {
-            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-            partialWakeLock = powerManager.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK,
-                "TomatoClock::TimerWakeLock"
-            ).apply {
-                acquire(2 * 60 * 60 * 1000L /* 2 hours max */) 
-            }
-        }
-    }
-    
-    private fun releaseWakeLock() {
-        partialWakeLock?.let {
-            if (it.isHeld) {
-                it.release()
-            }
-        }
-        partialWakeLock = null
-    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.action?.let { action ->
-            when (action) {
-                ACTION_START -> repository.startTimer()
-                ACTION_PAUSE -> repository.pauseTimer()
-                ACTION_STOP -> repository.stopTimer()
-                ACTION_NEXT -> repository.nextPhase()
-                ACTION_SNOOZE -> repository.snooze()
+            serviceScope.launch {
+                when (action) {
+                    ACTION_START -> repository.startTimer()
+                    ACTION_PAUSE -> repository.pauseTimer()
+                    ACTION_STOP -> repository.stopTimer()
+                    ACTION_NEXT -> repository.nextPhase()
+                    ACTION_SNOOZE -> repository.snooze()
+                }
             }
         }
         
@@ -251,7 +228,6 @@ class TimerService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        releaseWakeLock()
         alarmPlayer.stop()
         serviceScope.cancel()
     }

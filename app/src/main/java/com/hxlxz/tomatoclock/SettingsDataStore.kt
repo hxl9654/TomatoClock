@@ -25,7 +25,7 @@ class SettingsDataStore(private val context: Context) {
         // Reminder Settings
         val SOUND_MODE = intPreferencesKey("sound_mode") // 0: Continuous, 1: Single, 2: Off
         val VIBRATION_MODE = intPreferencesKey("vibration_mode") // 0: Continuous, 1: Single, 2: Off
-        val RINGTONE = intPreferencesKey("ringtone") // 0: Digital, 1: Chime, 2: Soft Synth
+        val RINGTONE = intPreferencesKey("ringtone") // 0: Digital, 1: Chime, 2: SoftSynth, 3: ZenBowl, 4: NatureWood
         val WAKE_SCREEN = androidx.datastore.preferences.core.booleanPreferencesKey("wake_screen")
         val FLASH_SCREEN = androidx.datastore.preferences.core.booleanPreferencesKey("flash_screen")
         

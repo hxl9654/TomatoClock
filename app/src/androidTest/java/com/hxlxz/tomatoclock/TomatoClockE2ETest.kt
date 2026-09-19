@@ -14,7 +14,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -40,6 +39,9 @@ class TomatoClockE2ETest {
 
     private lateinit var dataStore: SettingsDataStore
 
+    @Inject
+    lateinit var timerRepository: TimerRepository
+
     private fun waitUntilTextExists(text: String, timeoutMillis: Long = 5000) {
         composeTestRule.waitUntil(timeoutMillis) {
             composeTestRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
@@ -47,21 +49,26 @@ class TomatoClockE2ETest {
     }
 
     @Before
-    fun setup() = runTest {
+    fun setup() = kotlinx.coroutines.runBlocking {
         hiltRule.inject()
         // Speed up the timer for testing: 1 minute configured in UI = 1 second in real time
         timeConfig.multiplier = 1L
-        
+
         dataStore = SettingsDataStore(ApplicationProvider.getApplicationContext())
         dataStore.saveFocusTime(3) // 3 seconds real time
         dataStore.saveShortBreakTime(2) // 2 seconds real time
     }
 
     @After
-    fun teardown() = runTest {
-        // Restore time multiplier
+    fun teardown() {
+        // [Fix-CS-1] timeConfig.multiplier 恢复必须同步执行（JUnit4 保证 @After 调用），
+        // 不能放在 runTest 内部——若 runTest 协程超时，同步代码可能被延迟执行。
         timeConfig.multiplier = 60L
-        ApplicationProvider.getApplicationContext<android.content.Context>().dataStore.edit { it.clear() }
+        kotlinx.coroutines.runBlocking {
+            // [Fix-P-1] Cancel running timers and scope to prevent state bleeding across tests
+            timerRepository.destroyForTesting()
+            ApplicationProvider.getApplicationContext<android.content.Context>().dataStore.edit { it.clear() }
+        }
     }
 
     @Test
@@ -80,7 +87,7 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("暂停").assertIsDisplayed()
         composeTestRule.onNodeWithText("停止").assertIsDisplayed()
 
-        // 3. Let the timer run to completion (wait 4 seconds max)
+        // 3. Let the timer run to completion virtually
         waitUntilTextExists("开始下个阶段")
         composeTestRule.waitForIdle()
 
@@ -90,7 +97,7 @@ class TomatoClockE2ETest {
         composeTestRule.waitForIdle()
 
         // SHORT_BREAK RUNNING 状态显示"短休息"
-        composeTestRule.onNodeWithText("短休息").assertIsDisplayed()
+        waitUntilTextExists("短休息")
 
         // 5. Test Pause functionality during break
         composeTestRule.onNodeWithText("暂停").performClick()
@@ -107,7 +114,7 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("准备专注").assertIsDisplayed()
         composeTestRule.onNodeWithText("00:03").assertIsDisplayed()
     }
-    
+
     @Test
     fun testSettingsNavigationAndModification() {
         composeTestRule.waitForIdle()
@@ -126,18 +133,18 @@ class TomatoClockE2ETest {
     }
 
     @Test
-    fun testManualTransitionAndSnoozeFlow() = runTest {
-        dataStore.saveSnoozeTime(2) // 2 seconds snooze
-        
-        
+    fun testManualTransitionAndSnoozeFlow() {
+        kotlinx.coroutines.runBlocking { dataStore.saveSnoozeTime(2) } // 2 seconds snooze
+
+
         composeTestRule.waitForIdle()
         // 【UI修复】IDLE 状态显示"准备专注"
         composeTestRule.onNodeWithText("准备专注").assertIsDisplayed()
 
         // Start timer
         composeTestRule.onNodeWithText("开始").performClick()
-        
-        // Wait 4 seconds for focus timer (3s) to finish
+
+        // Wait virtually for focus timer (3s) to finish
         waitUntilTextExists("开始下个阶段")
         composeTestRule.waitForIdle()
 
@@ -166,16 +173,18 @@ class TomatoClockE2ETest {
     }
 
     @Test
-    fun testLongBreakFlow() = runTest {
-        dataStore.saveCycles(2)
-        dataStore.saveLongBreakTime(4)
-        
+    fun testLongBreakFlow() {
+        kotlinx.coroutines.runBlocking {
+            dataStore.saveCycles(2)
+            dataStore.saveLongBreakTime(4)
+        }
+
         composeTestRule.waitForIdle()
         // Wait until datastore propagation reflects in UI (cycles = 2)
         waitUntilTextExists("第 1 / 2 次循环")
-        
+
         composeTestRule.onNodeWithText("开始").performClick()
-        
+
         // Cycle 1: Focus (initialized as 3s from @Before)
         waitUntilTextExists("开始下个阶段")
         composeTestRule.waitForIdle()
@@ -184,8 +193,8 @@ class TomatoClockE2ETest {
         composeTestRule.waitForIdle()
 
         // Should transition to SHORT_BREAK (2s from @Before)
-        composeTestRule.onNodeWithText("短休息").assertIsDisplayed()
-        
+        waitUntilTextExists("短休息")
+
         // Wait for Short break to finish (2s)
         waitUntilTextExists("开始下个阶段")
         composeTestRule.waitForIdle()
@@ -194,8 +203,8 @@ class TomatoClockE2ETest {
         composeTestRule.waitForIdle()
 
         // Cycle 2: Focus RUNNING (reads 3s again)
-        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
-        
+        waitUntilTextExists("专注中")
+
         // Wait for Focus to finish (3s)
         waitUntilTextExists("开始下个阶段")
         composeTestRule.waitForIdle()
@@ -204,7 +213,7 @@ class TomatoClockE2ETest {
         composeTestRule.waitForIdle()
 
         // Because cycles = 2, we should now be in LONG_BREAK
-        composeTestRule.onNodeWithText("长休息").assertIsDisplayed()
+        waitUntilTextExists("长休息")
     }
 
     @Test
@@ -214,31 +223,31 @@ class TomatoClockE2ETest {
         // Go to settings
         composeTestRule.onNodeWithContentDescription("设置").performClick()
         composeTestRule.waitForIdle()
-        
+
         // Find Sound Mode label
         composeTestRule.onNodeWithText("铃声模式").performScrollTo().assertIsDisplayed()
         // Select "响铃一次" (directly visible as SegmentedButton)
         composeTestRule.onNodeWithText("响铃一次").performScrollTo().performClick()
         composeTestRule.waitForIdle()
-        
+
         // Verify it was updated
         composeTestRule.onNodeWithText("响铃一次").performScrollTo().assertIsDisplayed()
-        
+
         // Find Vibration Mode label
         composeTestRule.onNodeWithText("震动模式").performScrollTo().assertIsDisplayed()
-        
+
         // Select "震动一次" (directly visible as SegmentedButton)
         composeTestRule.onNodeWithText("震动一次").performScrollTo().performClick()
         composeTestRule.waitForIdle()
-        
+
         // Verify it was updated
         composeTestRule.onNodeWithText("震动一次").performScrollTo().assertIsDisplayed()
-        
+
         // Go back
         composeTestRule.onNodeWithContentDescription("返回").performClick()
         composeTestRule.waitForIdle()
     }
-    
+
     @Test
     fun testSettingsFlashAndRingtoneModification() {
         composeTestRule.waitForIdle()
@@ -246,29 +255,29 @@ class TomatoClockE2ETest {
         // Go to settings
         composeTestRule.onNodeWithContentDescription("设置").performClick()
         composeTestRule.waitForIdle()
-        
+
         // Find Ringtone label
         composeTestRule.onNodeWithText("提示音选择").performScrollTo().assertIsDisplayed()
-        
+
         // Change Ringtone from default (清脆风铃) to (柔和合成音)
         composeTestRule.onNodeWithText("清脆风铃").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("柔和合成音").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("柔和合成音").performScrollTo().assertIsDisplayed()
-        
+
         // Toggle Flash Screen switch
         composeTestRule.onNodeWithText("结束时界面呼吸闪烁").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("结束时界面呼吸闪烁").performScrollTo().performClick()
         composeTestRule.waitForIdle()
-        
+
         // Go back
         composeTestRule.onNodeWithContentDescription("返回").performClick()
         composeTestRule.waitForIdle()
     }
 
     @Test
-    fun testAddFiveMinutesFlow() = runTest {
+    fun testAddFiveMinutesFlow() {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("开始").performClick()
         composeTestRule.waitForIdle()
@@ -286,12 +295,12 @@ class TomatoClockE2ETest {
         // 等待原来应该结束的3秒过去，确认它还没有结束（如果没加时，这里早就FINISHED了）
         composeTestRule.mainClock.advanceTimeBy(4000)
         composeTestRule.waitForIdle()
-        
+
         composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
     }
 
     @Test
-    fun testSkipPhaseFlow() = runTest {
+    fun testSkipPhaseFlow() {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("开始").performClick()
         composeTestRule.waitForIdle()

@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.hxlxz.tomatoclock.AlarmPlayer
 import com.hxlxz.tomatoclock.SettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -30,14 +33,19 @@ class SettingsViewModel @Inject constructor(
     val ringtoneFlow = dataStore.ringtoneFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1)
     val flashScreenFlow = dataStore.flashScreenFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    private val _uiEvents = MutableSharedFlow<String>()
+    val uiEvents: SharedFlow<String> = _uiEvents.asSharedFlow()
+
     private fun safeSave(action: suspend () -> Unit) {
         viewModelScope.launch {
             try {
                 action()
             } catch (e: IOException) {
                 Log.e("SettingsViewModel", "Failed to save to DataStore", e)
+                _uiEvents.emit("保存失败，请重试")
             } catch (e: Exception) {
                 Log.e("SettingsViewModel", "Unexpected error saving to DataStore", e)
+                _uiEvents.emit("发生未知错误，保存失败")
             }
         }
     }

@@ -75,7 +75,14 @@ class AlarmPlayer @Inject constructor(
             val audioRes = getAudioRes(ringtoneIndex.value)
 
             try {
-                mediaPlayer = MediaPlayer.create(context, audioRes)?.apply {
+                mediaPlayer = MediaPlayer.create(context, audioRes)
+                if (mediaPlayer == null) {
+                    Log.w("AlarmPlayer", "MediaPlayer.create() returned null for resource $audioRes. Falling back to default alarm ringtone.")
+                    val defaultUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+                    mediaPlayer = MediaPlayer.create(context, defaultUri)
+                }
+                
+                mediaPlayer?.apply {
                     setAudioAttributes(
                         AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_ALARM)
@@ -110,7 +117,14 @@ class AlarmPlayer @Inject constructor(
         isPreviewActive = true // 【H-5修复】标记预览状态
         val audioRes = getAudioRes(ringtoneIndex)
         try {
-            mediaPlayer = MediaPlayer.create(context, audioRes)?.apply {
+            mediaPlayer = MediaPlayer.create(context, audioRes)
+            if (mediaPlayer == null) {
+                Log.w("AlarmPlayer", "MediaPlayer.create() returned null for resource $audioRes. Preview will use default alarm.")
+                val defaultUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+                mediaPlayer = MediaPlayer.create(context, defaultUri)
+            }
+            
+            mediaPlayer?.apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)

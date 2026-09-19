@@ -730,11 +730,12 @@ class TimerRepositoryTest {
     }
 
     @Test
-    fun `snooze when IDLE does nothing`() = runTest(testDispatcher) {
+    fun `snooze when IDLE starts countdown with snooze duration`() = runTest(testDispatcher) {
         testScheduler.advanceUntilIdle()
         assertEquals(TimerState.IDLE, repository.timerState.value)
 
-        // snooze 可以在任何状态调用并重新启动计时器
+        // [Fix-TG-4] 修正测试名歧义：snooze() 在任何状态下都会启动倒计时，
+        // 函数注释明确说明"此函数可在任意状态调用"，测试名"does nothing"与行为矛盾。
         repository.snooze()
         testScheduler.runCurrent()
 

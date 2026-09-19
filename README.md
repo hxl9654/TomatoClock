@@ -12,7 +12,7 @@ A modern Android Pomodoro Timer application built with Kotlin, Jetpack Compose, 
 *   **Real-time Settings Sync (设置实时同步)**: Home screen instantly reflects changes made in Settings while the timer is idle.
 
 *   **Postpone Reminder (推迟提醒)**: Postpone a completed session to continue for a few more minutes.
-*   **Data Persistence (数据持久化)**: Settings are saved using Android DataStore.
+*   **Data Persistence (数据持久化)**: Settings are saved using Android DataStore. Features a 60-second write-through mechanism to persistently back up timer state, ensuring recovery after unexpected process termination. (应用采用 60 秒的直写式心跳保存机制，在异常杀后台后仍能准确恢复计时状态)
 *   **Pure Chinese UI (纯中文界面)**: The user interface is completely in Simplified Chinese.
 
 ## 🛠️ Tech Stack / 技术栈
@@ -26,7 +26,6 @@ A modern Android Pomodoro Timer application built with Kotlin, Jetpack Compose, 
     *   `AlarmManager.setAlarmClock()` — 系统级精确闹钟，绕过 Doze 模式，保障深度休眠下准时触发
     *   `TimerAlarmReceiver` — 接收系统闹钟广播，强制完成计时
     *   `FullScreenIntent` — 在锁屏/息屏状态下弹出全屏通知唤醒用户
-    *   `PowerManager.PARTIAL_WAKE_LOCK` — 保持 CPU 在计时期间运行（已配合 AlarmManager 使用）
 *   **Permissions / 权限说明**:
     *   `POST_NOTIFICATIONS`：用于在状态栏显示倒计时进度和前台服务通知。
     *   `USE_EXACT_ALARM` / `SCHEDULE_EXACT_ALARM`：用于设定精确的倒计时结束时间，确保息屏状态下准时提醒。
@@ -34,7 +33,7 @@ A modern Android Pomodoro Timer application built with Kotlin, Jetpack Compose, 
     *   `VIBRATE`：用于倒计时结束时的震动提醒。
 *   **Testing**:
     *   Unit Tests: JUnit 4, MockK, Coroutines Test, Robolectric
-    *   Snapshot Tests: Roborazzi (5 snapshots covering all states/modes)
+    *   Snapshot Tests: Roborazzi (10 snapshots covering all states/modes)
     *   E2E/Instrumented Tests: Compose UI Test, Hilt Android Testing
 
 ## 🧪 Testing / 测试

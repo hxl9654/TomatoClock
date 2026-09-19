@@ -22,7 +22,8 @@ class TomatoClockApplication : Application() {
         super.onCreate()
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStop(owner: LifecycleOwner) {
-                // App goes to background or is killed (as best effort)
+                // [Fix-P-5] Write-Through 策略已在 TimerRepository 各操作方法末尾持久化状态。
+                // 此处作为安全网，兜底「计时器运行时心跳窗口内（最多60秒）」的最后一次保存。
                 applicationScope.launch {
                     timerRepository.saveCurrentState()
                 }

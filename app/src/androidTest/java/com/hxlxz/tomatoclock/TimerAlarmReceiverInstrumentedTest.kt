@@ -36,30 +36,29 @@ class TimerAlarmReceiverInstrumentedTest {
     }
 
     @Test
-    fun `forceFinishTimer when RUNNING is called by receiver`() {
-        // 将测试场景改为 RUNNING 状态
-        val stateFlow = kotlinx.coroutines.flow.MutableStateFlow(TimerState.RUNNING)
-        io.mockk.every { mockRepo.timerState } returns stateFlow
-
-        // 触发 receiver
+    fun `onReceive calls forceFinishTimer with fromAlarm true`() = runTest {
+        // [Fix-TG-1] 验证 Receiver 触发后 forceFinishTimer(fromAlarm=true) 被调用。
         val intent = Intent(ApplicationProvider.getApplicationContext(), TimerAlarmReceiver::class.java)
         val receiver = TimerAlarmReceiver()
+
+        // When onReceive is called, Hilt will inject the @BindValue mockRepo into the receiver
         receiver.onReceive(ApplicationProvider.getApplicationContext(), intent)
 
-        // Receiver 应调用 forceFinishTimer(fromAlarm=true)
-        io.mockk.verify(exactly = 1) { mockRepo.forceFinishTimer(fromAlarm = true) }
+        // Verify the mock was called with fromAlarm=true
+        io.mockk.coVerify(exactly = 1, timeout = 3000) { mockRepo.forceFinishTimer(fromAlarm = true) }
     }
 
     @Test
-    fun `onReceive calls forceFinishTimer with fromAlarm true`() = runTest {
-        // Trigger the receiver
+    fun `onReceive called multiple times only triggers once per call`() = runTest {
+        // [Fix-TG-1] 取代原先重复的「RUNNING 状态」用例，改为验证调用幂等性：
+        // 每次 onReceive 应当恰好触发一次 forceFinishTimer，不多不少。
         val intent = Intent(ApplicationProvider.getApplicationContext(), TimerAlarmReceiver::class.java)
         val receiver = TimerAlarmReceiver()
-        
-        // When onReceive is called, Hilt will inject the @BindValue mockRepo into the receiver
+
         receiver.onReceive(ApplicationProvider.getApplicationContext(), intent)
-        
-        // Verify the mock was called
-        io.mockk.verify(exactly = 1) { mockRepo.forceFinishTimer(fromAlarm = true) }
+        receiver.onReceive(ApplicationProvider.getApplicationContext(), intent)
+
+        // 每次 onReceive 都应调用一次，共调用两次
+        io.mockk.coVerify(exactly = 2, timeout = 3000) { mockRepo.forceFinishTimer(fromAlarm = true) }
     }
 }

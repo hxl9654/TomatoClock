@@ -63,6 +63,7 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
 *   必须使用 **Hilt** 进行依赖注入。
 *   数据存储层必须使用 **Jetpack DataStore (Preferences)**。
 *   核心计时逻辑必须位于 **TimerRepository**，通过系统级别的闹钟调度（如 `AlarmScheduler` 接口）锚定时间，解决休眠带来的时间漂移。
+*   **状态同步机制**：`TimerRepository` 内部状态变动必须使用 `Mutex` 进行线程安全的锁保护，防止 Main 与 Default Coroutine 调度器之间的竞态条件。
 *   后台执行必须基于 **系统闹钟服务 (AlarmManager.setAlarmClock)** 配合 **全屏意图 (FullScreenIntent)**，彻底抛弃不可靠的 `PowerManager.PARTIAL_WAKE_LOCK`，保障应用切入后台或深度锁屏息屏时倒计时正常运行和强制唤醒亮屏。
 *   铃声及震动等硬件副作用应隔离至独立的 `AlarmPlayer` 模块单例中。
 *   禁止使用 `Thread.sleep` 阻塞主线程；状态更新通过 `StateFlow`。
@@ -85,4 +86,8 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
     *   推迟提醒
 *   视觉回归测试 (VRT)：覆盖 IDLE/RUNNING/PAUSED/FINISHED × FOCUS/SHORT_BREAK/LONG_BREAK 的关键组合快照。
 *   针对测试环境，引入加速机制 (Time Multiplier) 确保 E2E 测试在合理时间内完成。
+*   **测试隔离与稳定性 (Test Isolation & Determinism)**：
+    *   **防止状态泄漏 (State Bleeding)**：在 E2E 测试销毁阶段，必须显式调用 `TimerRepository.destroyForTesting()` 强制取消全局协程作用域，彻底阻断后台心跳任务跨测试向 DataStore 写入脏数据。
+    *   **消除 UI 测试抖动 (Flaky Tests)**：对异步发布的状态变更（如 `StateFlow` 的状态跳转），禁止使用瞬时的 `assertIsDisplayed()`，必须使用轮询重试机制的 `waitUntilTextExists()` 来安全等待 UI 响应。
+    *   **Mock 防御编程**：对 `TimerAlarmReceiver` 等需要被手动触发的组件，必须做可空安全调用（如 `pendingResult?.finish()`）以兼容无原生上下文的测试环境。
 *   CI 测试脚本必须解析 HTML 报告，在执行 0 个测试时立即失败（防止静默跳过）。
