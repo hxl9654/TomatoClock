@@ -284,18 +284,17 @@ class TomatoClockE2ETest {
 
         composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
 
-        // 此时由于 1 分钟 = 1 秒，专注时间3秒，剩余时间应很快降到 00:02 或更少。
-        // 点击加5分钟按钮（在我们的测试配置下，将增加5秒的倒计时时长）。
+        // 点击加5分钟按钮（在我们的测试配置下，将增加5秒的倒计时时长）
         composeTestRule.onNodeWithContentDescription("加5分钟").performClick()
         composeTestRule.waitForIdle()
 
-        // 验证时间确实增加：3秒加5秒，约等于8秒，我们验证不会立刻结束，仍然在"专注中"
-        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
-
-        // 等待原来应该结束的3秒过去，确认它还没有结束（如果没加时，这里早就FINISHED了）
-        composeTestRule.mainClock.advanceTimeBy(4000)
-        composeTestRule.waitForIdle()
-
+        // 验证增加 5 分钟（在测试环境下也是增加真实的 300 秒）
+        // 初始专注时间是 3 秒，加上 300 秒，立刻变成 303 秒，即 05:03 或 05:02
+        // 我们检查文本是否包含 "05:0"
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithText("05:0", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        
         composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
     }
 

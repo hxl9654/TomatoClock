@@ -70,7 +70,8 @@ class TimerService : Service() {
         }.launchIn(serviceScope)
     }
 
-    private suspend fun handleStateSideEffects(state: TimerState) {
+    @androidx.annotation.VisibleForTesting(otherwise = androidx.annotation.VisibleForTesting.PRIVATE)
+    internal suspend fun handleStateSideEffects(state: TimerState) {
         when (state) {
             TimerState.RUNNING -> {
                 alarmPlayer.stop()

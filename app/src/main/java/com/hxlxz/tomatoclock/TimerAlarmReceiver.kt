@@ -14,10 +14,13 @@ class TimerAlarmReceiver : BroadcastReceiver() {
     @Inject
     lateinit var repository: TimerRepository
 
+    @Inject
+    lateinit var applicationScope: kotlinx.coroutines.CoroutineScope
+
     override fun onReceive(context: Context, intent: Intent) {
         val pendingResult = goAsync()
         Log.d("TimerAlarmReceiver", "Exact alarm fired! Forcing timer finish.")
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+        applicationScope.launch {
             try {
                 repository.forceFinishTimer(fromAlarm = true)
             } finally {
