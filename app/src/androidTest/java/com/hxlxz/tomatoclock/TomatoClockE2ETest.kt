@@ -266,4 +266,43 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithContentDescription("返回").performClick()
         composeTestRule.waitForIdle()
     }
+
+    @Test
+    fun testAddFiveMinutesFlow() = runTest {
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("开始").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+
+        // 此时由于 1 分钟 = 1 秒，专注时间3秒，剩余时间应很快降到 00:02 或更少。
+        // 点击加5分钟按钮（在我们的测试配置下，将增加5秒的倒计时时长）。
+        composeTestRule.onNodeWithContentDescription("加5分钟").performClick()
+        composeTestRule.waitForIdle()
+
+        // 验证时间确实增加：3秒加5秒，约等于8秒，我们验证不会立刻结束，仍然在"专注中"
+        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+
+        // 等待原来应该结束的3秒过去，确认它还没有结束（如果没加时，这里早就FINISHED了）
+        composeTestRule.mainClock.advanceTimeBy(4000)
+        composeTestRule.waitForIdle()
+        
+        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+    }
+
+    @Test
+    fun testSkipPhaseFlow() = runTest {
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("开始").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+
+        // 点击跳过
+        composeTestRule.onNodeWithContentDescription("跳过当前周期").performClick()
+        composeTestRule.waitForIdle()
+
+        // 验证直接进入 FINISHED 状态
+        composeTestRule.onNodeWithText("开始下个阶段").assertIsDisplayed()
+    }
 }

@@ -213,6 +213,19 @@ class TimerRepository @Inject constructor(
         // The AlarmPlayer logic will be handled by TimerService reacting to state change
     }
 
+    /**
+     * 进入下一个番茄阶段，并自动启动倒计时。
+     *
+     * 状态机转换规则：
+     * - FOCUS (cycle < totalCycles)  -> SHORT_BREAK
+     * - FOCUS (cycle >= totalCycles) -> LONG_BREAK，cycle 不变（由 LONG_BREAK->FOCUS 重置为 1）
+     * - SHORT_BREAK -> FOCUS，cycle + 1（上限裁剪至 totalCycles）
+     * - LONG_BREAK  -> FOCUS，cycle = 1
+     *
+     * [CR-1修复] SHORT_BREAK->FOCUS 时 currentCycle 自增须裁剪到 totalCycles，
+     * 避免用户在 Settings 中缩小 totalCycles 后 currentCycle 持续越界，
+     * 导致 FOCUS -> LONG_BREAK 的条件永远无法满足。
+     */
     fun nextPhase() {
         when (_timerMode.value) {
             TimerMode.FOCUS -> {
@@ -224,7 +237,8 @@ class TimerRepository @Inject constructor(
             }
             TimerMode.SHORT_BREAK -> {
                 _timerMode.value = TimerMode.FOCUS
-                _currentCycle.value += 1
+                // [CR-1修复] coerceAtMost 防止 totalCycles 被用户缩小时越界
+                _currentCycle.value = (_currentCycle.value + 1).coerceAtMost(_totalCycles.value)
             }
             TimerMode.LONG_BREAK -> {
                 _timerMode.value = TimerMode.FOCUS
@@ -236,6 +250,12 @@ class TimerRepository @Inject constructor(
         startCountdown(initialTime)
     }
 
+    /**
+     * 推迟提醒：在阶段结束（FINISHED）后，再计一段缓冲倒计时而不进入下一阶段。
+     *
+     * 注意：此函数可在任意状态调用，调用后无论当前状态如何都会启动新的倒计时。
+     * 业务上通常仅在 FINISHED 状态由 UI 触发。
+     */
     fun snooze() {
         val snoozeSeconds = snoozeTimeMin.value * timeConfig.multiplier
         _totalTimeInSeconds.value = snoozeSeconds
@@ -251,6 +271,15 @@ class TimerRepository @Inject constructor(
         return minutes * timeConfig.multiplier
     }
 
+    /**
+     * 在当前倒计时基础上追加时间（快捷"加5分钟"功能）。
+     *
+     * - RUNNING：延长目标结束时间，重新调度 Alarm，并立即刷新 UI 显示。
+     * - PAUSED：延长 pausedTimeRemainingSeconds，恢复后的倒计时将包含追加时间。
+     * - IDLE / FINISHED：静默忽略，不做任何操作。
+     *
+     * @param seconds 追加的秒数，应为正数。
+     */
     fun addTime(seconds: Long) {
         if (_timerState.value == TimerState.RUNNING) {
             targetEndTimeMs += (seconds * 1000L)
@@ -268,6 +297,7 @@ class TimerRepository @Inject constructor(
             _totalTimeInSeconds.value += seconds
             _timeRemaining.value = pausedTimeRemainingSeconds
         }
+        // IDLE / FINISHED: silently ignored
     }
 
     fun forceFinishTimer(fromAlarm: Boolean = false, isSkipped: Boolean = false) {

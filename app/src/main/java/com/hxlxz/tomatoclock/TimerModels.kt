@@ -1,11 +1,18 @@
 package com.hxlxz.tomatoclock
 
+import androidx.annotation.Keep
+
+// 【SEC-1修复】所有在 DataStore 中以字符串序列化的枚举和数据类必须加 @Keep，
+// 防止开启 R8/ProGuard 后字段名被混淆，导致 valueOf()/DataStore 解析崩溃。
+
+@Keep
 enum class TimerMode {
     FOCUS,
     SHORT_BREAK,
     LONG_BREAK
 }
 
+@Keep
 enum class TimerState {
     IDLE,
     RUNNING,
@@ -13,6 +20,7 @@ enum class TimerState {
     FINISHED
 }
 
+@Keep
 data class SavedTimerState(
     val state: TimerState,
     val mode: TimerMode,

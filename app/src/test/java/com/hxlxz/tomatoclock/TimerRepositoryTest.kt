@@ -696,4 +696,76 @@ class TimerRepositoryTest {
         assertEquals(pausedRemaining, restoredRepo.timeRemaining.value)
         assertEquals(TimerState.PAUSED, restoredRepo.timerState.value)
     }
+
+    // ── 本次新增：TC-1 ~ TC-3 缺失的覆盖率 ─────────────────────────────────
+
+    @Test
+    fun `nextPhase currentCycle does not exceed totalCycles after cycles setting reduced`() = runTest(testDispatcher) {
+        val cyclesFlow = kotlinx.coroutines.flow.MutableStateFlow(4)
+        coEvery { mockDataStore.cyclesFlow } returns cyclesFlow
+
+        val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
+        val repo = TimerRepository(mockDataStore, TimeConfig(), testScope, mockAlarmScheduler)
+        testScheduler.advanceUntilIdle()
+
+        // 推进到 currentCycle = 3, SHORT_BREAK
+        repo.nextPhase() // SHORT_BREAK, current=1
+        repo.nextPhase() // FOCUS, current=2
+        repo.nextPhase() // SHORT_BREAK, current=2
+        repo.nextPhase() // FOCUS, current=3
+        repo.nextPhase() // SHORT_BREAK, current=3
+        testScheduler.runCurrent()
+
+        // 用户在设置中将 totalCycles 缩小到 2
+        cyclesFlow.value = 2
+        testScheduler.advanceUntilIdle()
+
+        // 进入下一阶段
+        repo.nextPhase()
+        testScheduler.runCurrent()
+
+        // currentCycle 被裁剪到 totalCycles (2)
+        assertEquals(2, repo.currentCycle.value)
+        assertEquals(TimerMode.FOCUS, repo.timerMode.value)
+    }
+
+    @Test
+    fun `snooze when IDLE does nothing`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        assertEquals(TimerState.IDLE, repository.timerState.value)
+
+        // snooze 可以在任何状态调用并重新启动计时器
+        repository.snooze()
+        testScheduler.runCurrent()
+
+        // 因为 snooze 会启动计时器，所以它应该进入 RUNNING 状态，并且时长为 snooze 时间
+        assertEquals(TimerState.RUNNING, repository.timerState.value)
+        assertEquals(5 * 60L, repository.timeRemaining.value)
+    }
+
+    @Test
+    fun `pause then addTime then resume preserves correct remaining time`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+
+        advanceTimeBy(60_000.milliseconds) // 运行 1 分钟
+
+        repository.pauseTimer()
+        testScheduler.runCurrent()
+
+        val remainingBeforeAdd = repository.timeRemaining.value
+
+        // 添加 5 分钟 (300秒)
+        repository.addTime(300L)
+        testScheduler.runCurrent()
+        assertEquals(remainingBeforeAdd + 300L, repository.timeRemaining.value)
+
+        // 恢复运行
+        repository.startTimer()
+        testScheduler.runCurrent()
+        
+        // 验证恢复后，剩余时间确实包括了新增的时间
+        assertEquals(remainingBeforeAdd + 300L, repository.timeRemaining.value)
+    }
 }

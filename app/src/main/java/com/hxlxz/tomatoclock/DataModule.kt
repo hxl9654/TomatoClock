@@ -19,6 +19,7 @@ abstract class DataModule {
 
     @Binds
     @Singleton
+    @Suppress("unused")
     abstract fun bindAlarmScheduler(impl: AndroidAlarmScheduler): AlarmScheduler
 
     companion object {
@@ -31,7 +32,9 @@ abstract class DataModule {
         @Provides
         @Singleton
         fun provideCoroutineDispatcher(): CoroutineDispatcher {
-            return Dispatchers.IO
+            // 【CR-3修复】计时轮询（startCountdown while(true)）是 CPU 调度任务，
+            // 不应占用 IO dispatcher 线程池（上限64个）。改用 Default dispatcher。
+            return Dispatchers.Default
         }
 
         @Provides

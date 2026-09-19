@@ -61,4 +61,22 @@ class AndroidAlarmSchedulerTest {
         scheduler.scheduleAlarm(System.currentTimeMillis() + 30_000L)
         scheduler.cancelAlarm()
     }
+
+    @Test
+    fun `scheduleAlarm actually sets AlarmClock in AlarmManager`() {
+        val mockContext = io.mockk.mockk<Context>(relaxed = true)
+        val mockAlarmManager = io.mockk.mockk<android.app.AlarmManager>(relaxed = true)
+        io.mockk.every { mockContext.getSystemService(Context.ALARM_SERVICE) } returns mockAlarmManager
+        io.mockk.every { mockAlarmManager.canScheduleExactAlarms() } returns true
+        
+        val mockScheduler = AndroidAlarmScheduler(mockContext)
+        val triggerTime = 123456789L
+        mockScheduler.scheduleAlarm(triggerTime)
+        io.mockk.verify { 
+            mockAlarmManager.setAlarmClock(
+                any<android.app.AlarmManager.AlarmClockInfo>(), 
+                any<android.app.PendingIntent>()
+            ) 
+        }
+    }
 }

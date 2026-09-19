@@ -220,4 +220,87 @@ class TimerScreenVrtTest {
         composeTestRule.onNodeWithContentDescription("设置").assertIsDisplayed()
         composeTestRule.onRoot().captureRoboImage()
     }
+
+    // ── 本次新增：TC-7 缺失的快照覆盖率 ─────────────────────────────────
+
+    @Test
+    fun testTimerScreenLongBreakFinishedSnapshot() {
+        composeTestRule.setContent {
+            com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+                TimerScreenContent(
+                    timerMode = TimerMode.LONG_BREAK,
+                    timerState = TimerState.FINISHED,
+                    timeRemaining = 0L,
+                    totalTime = 900L,
+                    currentCycle = 4,
+                    totalCycles = 4,
+                    flashScreen = false,
+                    onNavigateToSettings = {},
+                    onStart = {},
+                    onPause = {},
+                    onStop = {},
+                    onNextPhase = {},
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
+                )
+            }
+        }
+        
+        composeTestRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    fun testTimerScreenShortBreakPausedSnapshot() {
+        composeTestRule.setContent {
+            com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+                TimerScreenContent(
+                    timerMode = TimerMode.SHORT_BREAK,
+                    timerState = TimerState.PAUSED,
+                    timeRemaining = 200L,
+                    totalTime = 300L,
+                    currentCycle = 1,
+                    totalCycles = 4,
+                    flashScreen = false,
+                    onNavigateToSettings = {},
+                    onStart = {},
+                    onPause = {},
+                    onStop = {},
+                    onNextPhase = {},
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
+                )
+            }
+        }
+        
+        composeTestRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    fun testTimerScreenFinishedWithoutFlashSnapshot() {
+        composeTestRule.setContent {
+            com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+                TimerScreenContent(
+                    timerMode = TimerMode.FOCUS,
+                    timerState = TimerState.FINISHED,
+                    timeRemaining = 0L,
+                    totalTime = 1500L,
+                    currentCycle = 1,
+                    totalCycles = 4,
+                    flashScreen = false,
+                    onNavigateToSettings = {},
+                    onStart = {},
+                    onPause = {},
+                    onStop = {},
+                    onNextPhase = {},
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
+                )
+            }
+        }
+        
+        composeTestRule.onRoot().captureRoboImage()
+    }
 }

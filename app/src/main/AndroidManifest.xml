@@ -7,8 +7,16 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    
+    <!-- 
+      Exact Alarm 权限说明 (SEC-2)：
+      - USE_EXACT_ALARM: 适用于"闹钟/计时器"类应用，系统直接豁免，不需要用户授权。但在 Google Play 上架时需经过严格的 Policy 审核。
+      - SCHEDULE_EXACT_ALARM: 需要引导用户手动在设置中开启，适用于一般的日历/提醒应用。
+      本项目作为一个番茄钟(计时器)应用，理论上应该申请 USE_EXACT_ALARM，但考虑到向后兼容或非 Google Play 渠道分发，两者同时声明作为后备。
+    -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" tools:ignore="ExactAlarmPolicy" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" tools:ignore="FullScreenIntentPolicy" />
 
     <application

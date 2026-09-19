@@ -100,11 +100,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
 
-    override fun onStart() {
-        super.onStart()
-        // Start Foreground Service to ensure it runs
+        // 【CR-4修复】startService 移至 onCreate，避免 onStart 在每次从
+        // SettingsScreen 返回时重复触发（onStart 覆盖了 Activity 重建/Resume 路径）。
+        // TimerService 声明为 START_STICKY，系统会在进程复活后自动重启它。
         try {
             val serviceIntent = Intent(this, TimerService::class.java)
             startService(serviceIntent)

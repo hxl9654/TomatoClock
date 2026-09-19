@@ -27,6 +27,11 @@ A modern Android Pomodoro Timer application built with Kotlin, Jetpack Compose, 
     *   `TimerAlarmReceiver` — 接收系统闹钟广播，强制完成计时
     *   `FullScreenIntent` — 在锁屏/息屏状态下弹出全屏通知唤醒用户
     *   `PowerManager.PARTIAL_WAKE_LOCK` — 保持 CPU 在计时期间运行（已配合 AlarmManager 使用）
+*   **Permissions / 权限说明**:
+    *   `POST_NOTIFICATIONS`：用于在状态栏显示倒计时进度和前台服务通知。
+    *   `USE_EXACT_ALARM` / `SCHEDULE_EXACT_ALARM`：用于设定精确的倒计时结束时间，确保息屏状态下准时提醒。
+    *   `WAKE_LOCK` / `USE_FULL_SCREEN_INTENT`：用于在倒计时结束时点亮屏幕并弹出提醒界面。
+    *   `VIBRATE`：用于倒计时结束时的震动提醒。
 *   **Testing**:
     *   Unit Tests: JUnit 4, MockK, Coroutines Test, Robolectric
     *   Snapshot Tests: Roborazzi (5 snapshots covering all states/modes)
