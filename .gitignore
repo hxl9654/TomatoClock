@@ -53,3 +53,4 @@ scratch/
 # Miscellaneous
 test_output.log
 git_log.patch
+logcat_output.txt
