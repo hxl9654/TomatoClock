@@ -527,10 +527,11 @@ class TimerRepositoryTest {
         assertEquals(TimerMode.SHORT_BREAK, repo.timerMode.value)
         assertEquals(3, repo.currentCycle.value)
         assertEquals(false, repo.suppressAlarm.value)
-        // Approx 120 seconds
+        // [B-7修复] 将时间容差从宽泛的 110..125 缩紧至确定的 ±1 秒内
+        // 增强对恢复逻辑计算偏差的敏感度。
         org.junit.Assert.assertTrue(
-            "Expected time around 120, but was ${repo.timeRemaining.value}",
-            repo.timeRemaining.value in 110L..125L
+            "Expected time remaining to be exactly 120 or 119, but was ${repo.timeRemaining.value}",
+            repo.timeRemaining.value in 119L..120L
         )
     }
 
@@ -768,5 +769,81 @@ class TimerRepositoryTest {
         
         // 验证恢复后，剩余时间确实包括了新增的时间
         assertEquals(remainingBeforeAdd + 300L, repository.timeRemaining.value)
+    }
+
+    @Test
+    fun `addTime exceeds max bounds caps at 24 hours`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+
+        val maxAllowed = 24 * 3600L
+        val secondsToAdd = maxAllowed + 1000L
+
+        repository.addTime(secondsToAdd)
+        testScheduler.runCurrent()
+
+        // It should cap the total time to exactly maxAllowed
+        assertEquals(maxAllowed, repository.totalTimeInSeconds.value)
+
+        // Cancel timer to prevent runTest from simulating 24 hours of ticks which causes OOM
+        repository.forceFinishTimer()
+    }
+
+    // ── [B-3修复] 补全缺失的边界场景测试 ──────────────────────
+
+    @Test
+    fun `snooze when PAUSED should override paused state and start snooze countdown`() = runTest(testDispatcher) {
+        // 验证：snooze() 文档说明"可在任意状态调用"，
+        // PAUSED 状态下调用应直接启动 snooze 倒计时（覆盖暂停的时间）
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+        advanceTimeBy(60_000.milliseconds) // 运行 1 分钟
+
+        repository.pauseTimer()
+        testScheduler.runCurrent()
+        assertEquals(TimerState.PAUSED, repository.timerState.value)
+
+        // 在 PAUSED 状态下调用 snooze
+        repository.snooze()
+        testScheduler.runCurrent()
+
+        // 应进入 RUNNING 状态，时长为 snooze 时间（5 分钟 = 300 秒）
+        assertEquals(TimerState.RUNNING, repository.timerState.value)
+        assertEquals(5 * 60L, repository.totalTimeInSeconds.value)
+    }
+
+    @Test
+    fun `addTime with zero seconds does nothing`() = runTest(testDispatcher) {
+        // 验证 addTime(0) 静默忽略，不修改任何状态
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+
+        val totalBefore = repository.totalTimeInSeconds.value
+
+        repository.addTime(0L)
+        testScheduler.runCurrent()
+
+        // 总时长不应有变化
+        assertEquals(totalBefore, repository.totalTimeInSeconds.value)
+        repository.pauseTimer()
+    }
+
+    @Test
+    fun `addTime with negative seconds does nothing`() = runTest(testDispatcher) {
+        // 验证 addTime(-300) 静默忽略（validSeconds <= 0 时 return@withLock）
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+
+        val totalBefore = repository.totalTimeInSeconds.value
+
+        repository.addTime(-300L)
+        testScheduler.runCurrent()
+
+        assertEquals(totalBefore, repository.totalTimeInSeconds.value)
+        repository.pauseTimer()
     }
 }

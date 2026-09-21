@@ -61,13 +61,11 @@ class TomatoClockE2ETest {
 
     @After
     fun teardown() {
-        // [Fix-CS-1] timeConfig.multiplier 恢复必须同步执行（JUnit4 保证 @After 调用），
-        // 不能放在 runTest 内部——若 runTest 协程超时，同步代码可能被延迟执行。
         timeConfig.multiplier = 60L
         kotlinx.coroutines.runBlocking {
-            // [Fix-P-1] Cancel running timers and scope to prevent state bleeding across tests
             timerRepository.destroyForTesting()
             ApplicationProvider.getApplicationContext<android.content.Context>().dataStore.edit { it.clear() }
+            dataStore.clearTimerState()
         }
     }
 
@@ -182,6 +180,10 @@ class TomatoClockE2ETest {
         composeTestRule.waitForIdle()
         // Wait until datastore propagation reflects in UI (cycles = 2)
         waitUntilTextExists("第 1 / 2 次循环")
+        // add extra wait to ensure the second datastore propagation (longBreakTime) is also processed
+        // which prevents the "开始" button semantics node from being invalidated during performClick
+        composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("开始").performClick()
 
@@ -294,7 +296,7 @@ class TomatoClockE2ETest {
         composeTestRule.waitUntil(5000) {
             composeTestRule.onAllNodesWithText("05:0", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
-        
+
         composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
     }
 
@@ -312,5 +314,31 @@ class TomatoClockE2ETest {
 
         // 验证直接进入 FINISHED 状态
         composeTestRule.onNodeWithText("开始下个阶段").assertIsDisplayed()
+    }
+
+    @Test
+    fun testAddTimeWhilePausedFlow() {
+        // [B-8修复] 补充 PAUSED 状态下点击加时按钮的 E2E 验证
+        composeTestRule.waitForIdle()
+
+        // 1. 开始
+        composeTestRule.onNodeWithText("开始").performClick()
+        composeTestRule.waitForIdle()
+
+        // 2. 暂停
+        composeTestRule.onNodeWithText("暂停").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("专注已暂停").assertIsDisplayed()
+
+        // 3. 在暂停状态下点击加时
+        composeTestRule.onNodeWithContentDescription("加5分钟").performClick()
+        composeTestRule.waitForIdle()
+
+        // 4. 验证 UI 仍然保持为 "专注已暂停" (PAUSED 状态)，且时间已增加
+        composeTestRule.onNodeWithText("专注已暂停").assertIsDisplayed()
+        // 检查时间是否变成了类似 05:xx (取决于原来暂停时的倒计时剩余)
+        composeTestRule.waitUntil(5000) {
+            composeTestRule.onAllNodesWithText("05:0", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
     }
 }

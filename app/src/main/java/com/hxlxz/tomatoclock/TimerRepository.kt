@@ -1,6 +1,8 @@
 package com.hxlxz.tomatoclock
 
 import android.os.SystemClock
+import android.util.Log
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -65,9 +67,12 @@ class TimerRepository @Inject constructor(
     private var timerJob: Job? = null
 
     // Time Anchoring: stores the target absolute time
+    @Volatile
     private var targetEndTimeMs = 0L
+    @Volatile
     private var pausedTimeRemainingSeconds = 0L
     private val stateMutex = Mutex()
+    private val isInitialized = CompletableDeferred<Unit>()
 
     init {
         scope.launch {
@@ -76,59 +81,62 @@ class TimerRepository @Inject constructor(
             // focusTimeMin 使用 SharingStarted.Eagerly 会立即发射默认值，
             // 若监听器先于恢复逻辑运行，可能将恢复的时间覆盖回默认专注时间。
             val savedState = settingsDataStore.savedTimerStateFlow.first()
-            if (savedState != null) {
-                val now = System.currentTimeMillis()
-                // 如果超过1小时 (3,600,000 毫秒)，则丢弃状态
-                if (now - savedState.lastSavedTimestamp > 3600_000L) {
-                    settingsDataStore.clearTimerState()
-                } else {
-                    _timerMode.value = savedState.mode
-                    _currentCycle.value = savedState.currentCycle
-                    // 【H-4修复】优先使用保存的 totalTimeInSeconds，
-                    // 以正确恢复用户通过 addTime() 延长后的进度圆弧。
-                    _totalTimeInSeconds.value = if (savedState.totalTimeInSeconds > 0L) {
-                        savedState.totalTimeInSeconds
+            stateMutex.withLock {
+                if (savedState != null) {
+                    val now = System.currentTimeMillis()
+                    // 如果超过1小时 (3,600,000 毫秒)，则丢弃状态
+                    if (now - savedState.lastSavedTimestamp > 3600_000L) {
+                        settingsDataStore.clearTimerState()
                     } else {
-                        getInitialTimeForMode(savedState.mode) // 旧数据兼容 fallback
-                    }
+                        _timerMode.value = savedState.mode
+                        _currentCycle.value = savedState.currentCycle
+                        // 【H-4修复】优先使用保存的 totalTimeInSeconds，
+                        // 以正确恢复用户通过 addTime() 延长后的进度圆弧。
+                        _totalTimeInSeconds.value = if (savedState.totalTimeInSeconds > 0L) {
+                            savedState.totalTimeInSeconds
+                        } else {
+                            getInitialTimeForMode(savedState.mode) // 旧数据兼容 fallback
+                        }
 
-                    when (savedState.state) {
-                        TimerState.RUNNING -> {
-                            val elapsed = now - savedState.targetEndTimeWallClock
-                            if (elapsed >= 0) {
-                                // 已经到期
-                                _suppressAlarm.value = elapsed > 10 * 60 * 1000L // 超过10分钟静音
+                        when (savedState.state) {
+                            TimerState.RUNNING -> {
+                                val elapsed = now - savedState.targetEndTimeWallClock
+                                if (elapsed >= 0) {
+                                    // 已经到期
+                                    _suppressAlarm.value = elapsed > 10 * 60 * 1000L // 超过10分钟静音
+                                    _timeRemaining.value = 0
+                                    _timerState.value = TimerState.FINISHED
+                                } else {
+                                    // 还在运行
+                                    _suppressAlarm.value = false
+                                    val remainingSeconds = (-elapsed + 999L) / 1000L
+                                    startCountdown(remainingSeconds)
+                                }
+                            }
+
+                            TimerState.PAUSED -> {
+                                _suppressAlarm.value = false
+                                pausedTimeRemainingSeconds = savedState.pausedTimeRemaining
+                                _timeRemaining.value = pausedTimeRemainingSeconds
+                                _timerState.value = TimerState.PAUSED
+                            }
+
+                            TimerState.FINISHED -> {
+                                _suppressAlarm.value = true // 之前就完成的，恢复时不再响铃
                                 _timeRemaining.value = 0
                                 _timerState.value = TimerState.FINISHED
-                            } else {
-                                // 还在运行
-                                _suppressAlarm.value = false
-                                val remainingSeconds = (-elapsed + 999L) / 1000L
-                                startCountdown(remainingSeconds)
                             }
-                        }
 
-                        TimerState.PAUSED -> {
-                            _suppressAlarm.value = false
-                            pausedTimeRemainingSeconds = savedState.pausedTimeRemaining
-                            _timeRemaining.value = pausedTimeRemainingSeconds
-                            _timerState.value = TimerState.PAUSED
-                        }
-
-                        TimerState.FINISHED -> {
-                            _suppressAlarm.value = true // 之前就完成的，恢复时不再响铃
-                            _timeRemaining.value = 0
-                            _timerState.value = TimerState.FINISHED
-                        }
-
-                        TimerState.IDLE -> {
-                            _suppressAlarm.value = false
-                            val initialTime = getInitialTimeForMode(savedState.mode)
-                            _timeRemaining.value = initialTime
+                            TimerState.IDLE -> {
+                                _suppressAlarm.value = false
+                                val initialTime = getInitialTimeForMode(savedState.mode)
+                                _timeRemaining.value = initialTime
+                            }
                         }
                     }
                 }
             }
+            isInitialized.complete(Unit)
 
             // ── Step 2: 状态恢复完成后，再启动响应式设置监听 ────────────────────
             // 保证监听器不会干扰上方的恢复逻辑。
@@ -153,22 +161,25 @@ class TimerRepository @Inject constructor(
         }
     }
 
-    suspend fun startTimer(): Unit = stateMutex.withLock {
-        if (_timerState.value == TimerState.RUNNING) return
+    suspend fun startTimer() {
+        isInitialized.await()
+        stateMutex.withLock {
+            if (_timerState.value == TimerState.RUNNING) return
 
-        if (_timerState.value == TimerState.PAUSED) {
-            // Resume from where we left off
-            startCountdown(pausedTimeRemainingSeconds)
-        } else {
-            // IDLE or FINISHED: reset time to full duration for current mode
-            // [Fix-CS-3] 消除隐式依赖：显式重置 pausedTimeRemainingSeconds，
-            // 避免在 IDLE/FINISHED 启动后残留旧的暂停时间。
-            pausedTimeRemainingSeconds = 0L
-            val initialTime = getInitialTimeForMode(_timerMode.value)
-            _totalTimeInSeconds.value = initialTime
-            startCountdown(initialTime)
+            if (_timerState.value == TimerState.PAUSED) {
+                // Resume from where we left off
+                startCountdown(pausedTimeRemainingSeconds)
+            } else {
+                // IDLE or FINISHED: reset time to full duration for current mode
+                // [Fix-CS-3] 消除隐式依赖：显式重置 pausedTimeRemainingSeconds，
+                // 避免在 IDLE/FINISHED 启动后残留旧的暂停时间。
+                pausedTimeRemainingSeconds = 0L
+                val initialTime = getInitialTimeForMode(_timerMode.value)
+                _totalTimeInSeconds.value = initialTime
+                startCountdown(initialTime)
+            }
+            persistStateAsync()
         }
-        persistStateAsync()
     }
 
     private fun startCountdown(durationSeconds: Long) {
@@ -205,26 +216,32 @@ class TimerRepository @Inject constructor(
         }
     }
 
-    suspend fun pauseTimer(): Unit = stateMutex.withLock {
-        timerJob?.cancel()
-        alarmScheduler.cancelAlarm()
-        pausedTimeRemainingSeconds = _timeRemaining.value
-        _timerState.value = TimerState.PAUSED
-        persistStateAsync()
+    suspend fun pauseTimer() {
+        isInitialized.await()
+        stateMutex.withLock {
+            timerJob?.cancel()
+            alarmScheduler.cancelAlarm()
+            pausedTimeRemainingSeconds = _timeRemaining.value
+            _timerState.value = TimerState.PAUSED
+            persistStateAsync()
+        }
     }
 
-    suspend fun stopTimer(): Unit = stateMutex.withLock {
-        timerJob?.cancel()
-        alarmScheduler.cancelAlarm()
-        _timerState.value = TimerState.IDLE
-        _timerMode.value = TimerMode.FOCUS
-        _currentCycle.value = 1
+    suspend fun stopTimer() {
+        isInitialized.await()
+        stateMutex.withLock {
+            timerJob?.cancel()
+            alarmScheduler.cancelAlarm()
+            _timerState.value = TimerState.IDLE
+            _timerMode.value = TimerMode.FOCUS
+            _currentCycle.value = 1
 
-        val initialTime = getInitialTimeForMode(TimerMode.FOCUS)
-        _timeRemaining.value = initialTime
-        _totalTimeInSeconds.value = initialTime
-        // IDLE 状态无需恢复，直接清除持久化数据
-        clearStateAsync()
+            val initialTime = getInitialTimeForMode(TimerMode.FOCUS)
+            _timeRemaining.value = initialTime
+            _totalTimeInSeconds.value = initialTime
+            // IDLE 状态无需恢复，直接清除持久化数据
+            clearStateAsync()
+        }
     }
 
     private fun onTimerFinished(isSkipped: Boolean = false) {
@@ -250,31 +267,34 @@ class TimerRepository @Inject constructor(
      * 避免用户在 Settings 中缩小 totalCycles 后 currentCycle 持续越界，
      * 导致 FOCUS -> LONG_BREAK 的条件永远无法满足。
      */
-    suspend fun nextPhase(): Unit = stateMutex.withLock {
-        when (_timerMode.value) {
-            TimerMode.FOCUS -> {
-                if (_currentCycle.value >= _totalCycles.value) {
-                    _timerMode.value = TimerMode.LONG_BREAK
-                } else {
-                    _timerMode.value = TimerMode.SHORT_BREAK
+    suspend fun nextPhase() {
+        isInitialized.await()
+        stateMutex.withLock {
+            when (_timerMode.value) {
+                TimerMode.FOCUS -> {
+                    if (_currentCycle.value >= _totalCycles.value) {
+                        _timerMode.value = TimerMode.LONG_BREAK
+                    } else {
+                        _timerMode.value = TimerMode.SHORT_BREAK
+                    }
+                }
+
+                TimerMode.SHORT_BREAK -> {
+                    _timerMode.value = TimerMode.FOCUS
+                    // [CR-1修复] coerceAtMost 防止 totalCycles 被用户缩小时越界
+                    _currentCycle.value = (_currentCycle.value + 1).coerceAtMost(_totalCycles.value)
+                }
+
+                TimerMode.LONG_BREAK -> {
+                    _timerMode.value = TimerMode.FOCUS
+                    _currentCycle.value = 1
                 }
             }
-
-            TimerMode.SHORT_BREAK -> {
-                _timerMode.value = TimerMode.FOCUS
-                // [CR-1修复] coerceAtMost 防止 totalCycles 被用户缩小时越界
-                _currentCycle.value = (_currentCycle.value + 1).coerceAtMost(_totalCycles.value)
-            }
-
-            TimerMode.LONG_BREAK -> {
-                _timerMode.value = TimerMode.FOCUS
-                _currentCycle.value = 1
-            }
+            val initialTime = getInitialTimeForMode(_timerMode.value)
+            _totalTimeInSeconds.value = initialTime
+            startCountdown(initialTime)
+            persistStateAsync()
         }
-        val initialTime = getInitialTimeForMode(_timerMode.value)
-        _totalTimeInSeconds.value = initialTime
-        startCountdown(initialTime)
-        persistStateAsync()
     }
 
     /**
@@ -283,11 +303,14 @@ class TimerRepository @Inject constructor(
      * 注意：此函数可在任意状态调用，调用后无论当前状态如何都会启动新的倒计时。
      * 业务上通常仅在 FINISHED 状态由 UI 触发。
      */
-    suspend fun snooze(): Unit = stateMutex.withLock {
-        val snoozeSeconds = snoozeTimeMin.value * timeConfig.multiplier
-        _totalTimeInSeconds.value = snoozeSeconds
-        startCountdown(snoozeSeconds)
-        persistStateAsync()
+    suspend fun snooze() {
+        isInitialized.await()
+        stateMutex.withLock {
+            val snoozeSeconds = snoozeTimeMin.value * timeConfig.multiplier
+            _totalTimeInSeconds.value = snoozeSeconds
+            startCountdown(snoozeSeconds)
+            persistStateAsync()
+        }
     }
 
     /**
@@ -314,43 +337,57 @@ class TimerRepository @Inject constructor(
      *
      * @param seconds 追加的秒数，应为正数。
      */
-    suspend fun addTime(seconds: Long): Unit = stateMutex.withLock {
-        if (_timerState.value == TimerState.RUNNING) {
-            targetEndTimeMs += (seconds * 1000L)
-            _totalTimeInSeconds.value += seconds
-            alarmScheduler.scheduleAlarm(targetEndTimeMs)
-
-            // Immediately update remaining time for UI responsiveness
-            val now = SystemClock.elapsedRealtime()
-            val remainingMs = targetEndTimeMs - now
-            if (remainingMs > 0) {
-                _timeRemaining.value = (remainingMs + 999L) / 1000L
+    suspend fun addTime(seconds: Long) {
+        isInitialized.await()
+        stateMutex.withLock {
+            val maxAllowedSeconds = 24 * 3600L
+            val validSeconds = if (_totalTimeInSeconds.value + seconds > maxAllowedSeconds) {
+                maxAllowedSeconds - _totalTimeInSeconds.value
+            } else {
+                seconds
             }
-            persistStateAsync()
-        } else if (_timerState.value == TimerState.PAUSED) {
-            pausedTimeRemainingSeconds += seconds
-            _totalTimeInSeconds.value += seconds
-            _timeRemaining.value = pausedTimeRemainingSeconds
-            persistStateAsync()
+            if (validSeconds <= 0) return@withLock
+
+            if (_timerState.value == TimerState.RUNNING) {
+                targetEndTimeMs += (validSeconds * 1000L)
+                _totalTimeInSeconds.value += validSeconds
+                alarmScheduler.scheduleAlarm(targetEndTimeMs)
+
+                // Immediately update remaining time for UI responsiveness
+                val now = SystemClock.elapsedRealtime()
+                val remainingMs = targetEndTimeMs - now
+                if (remainingMs > 0) {
+                    _timeRemaining.value = (remainingMs + 999L) / 1000L
+                }
+                persistStateAsync()
+            } else if (_timerState.value == TimerState.PAUSED) {
+                pausedTimeRemainingSeconds += validSeconds
+                _totalTimeInSeconds.value += validSeconds
+                _timeRemaining.value = pausedTimeRemainingSeconds
+                persistStateAsync()
+            }
+            // IDLE / FINISHED: silently ignored
         }
-        // IDLE / FINISHED: silently ignored
     }
 
-    suspend fun forceFinishTimer(fromAlarm: Boolean = false, isSkipped: Boolean = false): Unit = stateMutex.withLock {
-        if (_timerState.value == TimerState.RUNNING) {
-            if (fromAlarm) {
-                // If this is triggered by the alarm, ensure it's not a stale alarm
-                // caused by a recent addTime operation pushing the target end time further.
-                val now = SystemClock.elapsedRealtime()
-                if (now < targetEndTimeMs - 2000L) {
-                    return
+    suspend fun forceFinishTimer(fromAlarm: Boolean = false, isSkipped: Boolean = false) {
+        isInitialized.await()
+        stateMutex.withLock {
+            if (_timerState.value == TimerState.RUNNING) {
+                if (fromAlarm) {
+                    // If this is triggered by the alarm, ensure it's not a stale alarm
+                    // caused by a recent addTime operation pushing the target end time further.
+                    val now = SystemClock.elapsedRealtime()
+                    if (now < targetEndTimeMs - 2000L) {
+                        return@withLock
+                    }
                 }
+                timerJob?.cancel()
+                alarmScheduler.cancelAlarm()
+                _timeRemaining.value = 0
+                onTimerFinished(isSkipped)
+                // [Fix-P-5] persistStateAsync() 已在 onTimerFinished() 内调用，无需重复。
             }
-            timerJob?.cancel()
-            alarmScheduler.cancelAlarm()
-            _timeRemaining.value = 0
-            onTimerFinished(isSkipped)
-            // [Fix-P-5] persistStateAsync() 已在 onTimerFinished() 内调用，无需重复。
         }
     }
 
@@ -389,7 +426,15 @@ class TimerRepository @Inject constructor(
      * 实现 Write-Through 持久化策略，确保状态在操作完成后立即落盘。
      */
     private fun persistStateAsync() {
-        scope.launch { saveCurrentState() }
+        scope.launch {
+            // [A-3修复] 捕获 DataStore 可能抛出的 IOException（磁盘满/加密错误等），
+            // SupervisorJob 防止了崩溃，但同时也静默吐掉了异常，违反 Rule data_layer.md #3。
+            try {
+                saveCurrentState()
+            } catch (e: Exception) {
+                Log.e("TimerRepository", "Failed to persist timer state to DataStore", e)
+            }
+        }
     }
 
     /**
@@ -399,7 +444,13 @@ class TimerRepository @Inject constructor(
      * 避免下次启动时错误恢复到已停止的状态。
      */
     private fun clearStateAsync() {
-        scope.launch { settingsDataStore.clearTimerState() }
+        scope.launch {
+            try {
+                settingsDataStore.clearTimerState()
+            } catch (e: Exception) {
+                Log.e("TimerRepository", "Failed to clear timer state from DataStore", e)
+            }
+        }
     }
 
     @androidx.annotation.VisibleForTesting

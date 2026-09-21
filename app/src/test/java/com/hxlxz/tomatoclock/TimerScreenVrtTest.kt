@@ -303,4 +303,59 @@ class TimerScreenVrtTest {
         
         composeTestRule.onRoot().captureRoboImage()
     }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun testTimerScreenDarkModeSnapshot() {
+        composeTestRule.setContent {
+            com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+                TimerScreenContent(
+                    timerMode = TimerMode.FOCUS,
+                    timerState = TimerState.RUNNING,
+                    timeRemaining = 1200L,
+                    totalTime = 1500L,
+                    currentCycle = 2,
+                    totalCycles = 4,
+                    flashScreen = false,
+                    onNavigateToSettings = {},
+                    onStart = {},
+                    onPause = {},
+                    onStop = {},
+                    onNextPhase = {},
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
+                )
+            }
+        }
+        
+        composeTestRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    fun testTimerScreenLongBreakRunningSnapshot() {
+        composeTestRule.setContent {
+            com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+                TimerScreenContent(
+                    timerMode = TimerMode.LONG_BREAK,
+                    timerState = TimerState.RUNNING,
+                    timeRemaining = 600L,
+                    totalTime = 1200L,
+                    currentCycle = 4,
+                    totalCycles = 4,
+                    flashScreen = false,
+                    onNavigateToSettings = {},
+                    onStart = {},
+                    onPause = {},
+                    onStop = {},
+                    onNextPhase = {},
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
+                )
+            }
+        }
+        
+        composeTestRule.onRoot().captureRoboImage()
+    }
 }

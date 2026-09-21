@@ -71,5 +71,7 @@
     <!-- 通知渠道 -->
     <string name="notification_channel_name">番茄钟通知</string>
     <string name="notification_channel_desc">显示计时状态及结束提醒</string>
+    <string name="toast_permission_denied">需要通知权限以在后台运行倒计时</string>
+    <string name="toast_foreground_service_failed">无法在后台启动专注服务，请在应用内操作</string>
 </resources>
 

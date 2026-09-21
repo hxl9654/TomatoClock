@@ -11,6 +11,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import dagger.hilt.android.testing.BindValue
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import io.mockk.verify
+import androidx.core.content.ContextCompat
+import org.junit.After
 
 /**
  * TimerAlarmReceiver 的集成测试（Hilt 注入环境）。
@@ -28,16 +33,27 @@ class TimerAlarmReceiverInstrumentedTest {
 
     @BindValue
     @JvmField
-    val mockRepo: TimerRepository = io.mockk.mockk(relaxed = true)
+    val mockRepo: TimerRepository = io.mockk.mockk(relaxed = true) {
+        io.mockk.every { timerState } returns kotlinx.coroutines.flow.MutableStateFlow(TimerState.IDLE)
+        io.mockk.every { timeRemaining } returns kotlinx.coroutines.flow.MutableStateFlow(0L)
+        io.mockk.every { timerMode } returns kotlinx.coroutines.flow.MutableStateFlow(TimerMode.FOCUS)
+        io.mockk.every { suppressAlarm } returns kotlinx.coroutines.flow.MutableStateFlow(false)
+    }
 
     @Before
     fun setup() {
         hiltRule.inject()
+        mockkStatic(ContextCompat::class)
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(ContextCompat::class)
     }
 
     @Test
-    fun `onReceive calls forceFinishTimer with fromAlarm true`() = runTest {
-        // [Fix-TG-1] 验证 Receiver 触发后 forceFinishTimer(fromAlarm=true) 被调用。
+    fun `onReceive calls forceFinishTimer with fromAlarm true and starts TimerService`() = runTest {
+        // [Fix-TG-1] 验证 Receiver 触发后 forceFinishTimer(fromAlarm=true) 被调用，并且主动拉起 TimerService。
         val intent = Intent(ApplicationProvider.getApplicationContext(), TimerAlarmReceiver::class.java)
         val receiver = TimerAlarmReceiver()
 
@@ -46,6 +62,16 @@ class TimerAlarmReceiverInstrumentedTest {
 
         // Verify the mock was called with fromAlarm=true
         io.mockk.coVerify(exactly = 1, timeout = 3000) { mockRepo.forceFinishTimer(fromAlarm = true) }
+
+        // Verify that startForegroundService was called to start TimerService
+        verify(exactly = 1) { 
+            ContextCompat.startForegroundService(
+                any(),
+                withArg { intent ->
+                    assert(intent.component?.className == TimerService::class.java.name)
+                }
+            ) 
+        }
     }
 
     @Test
@@ -60,5 +86,18 @@ class TimerAlarmReceiverInstrumentedTest {
 
         // 每次 onReceive 都应调用一次，共调用两次
         io.mockk.coVerify(exactly = 2, timeout = 3000) { mockRepo.forceFinishTimer(fromAlarm = true) }
+    }
+
+    @Test
+    fun `onReceive handles TimeoutCancellationException gracefully`() = runTest {
+        io.mockk.coEvery { mockRepo.forceFinishTimer(fromAlarm = any(), isSkipped = any()) } throws io.mockk.mockk<kotlinx.coroutines.TimeoutCancellationException>(relaxed = true)
+
+        val intent = Intent(ApplicationProvider.getApplicationContext(), TimerAlarmReceiver::class.java)
+        val receiver = TimerAlarmReceiver()
+
+        // Should not crash
+        receiver.onReceive(ApplicationProvider.getApplicationContext(), intent)
+
+        io.mockk.coVerify(exactly = 1, timeout = 3000) { mockRepo.forceFinishTimer(fromAlarm = true) }
     }
 }

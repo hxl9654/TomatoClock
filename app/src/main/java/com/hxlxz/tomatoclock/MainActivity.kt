@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
     ) { isGranted: Boolean ->
         if (!isGranted) {
             Log.w("MainActivity", "POST_NOTIFICATIONS permission denied by user. Foreground service may operate with degraded experience.")
-            Toast.makeText(this, "需要通知权限以在后台运行倒计时", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_permission_denied), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -51,7 +51,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
         
         lifecycleScope.launch {
@@ -111,7 +113,7 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && e is android.app.ForegroundServiceStartNotAllowedException) {
                 Log.e("MainActivity", "Foreground service start not allowed in background", e)
-                Toast.makeText(this, "无法在后台启动专注服务，请在应用内操作", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.toast_foreground_service_failed), Toast.LENGTH_LONG).show()
             } else {
                 Log.e("MainActivity", "Failed to start TimerService", e)
             }

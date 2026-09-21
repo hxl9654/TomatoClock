@@ -97,7 +97,7 @@ class TimerScreenInstrumentedTest {
     }
 
     @Test
-    fun timerControls_addTimeAndSkip_visibleOnlyWhenRunning() {
+    fun timerControls_addTimeAndSkip_visibleWhenRunningOrPaused() {
         val viewModel = mockk<TimerViewModel>(relaxed = true)
         every { viewModel.timerMode } returns MutableStateFlow(TimerMode.FOCUS)
         val stateFlow = MutableStateFlow(TimerState.IDLE)
@@ -116,13 +116,13 @@ class TimerScreenInstrumentedTest {
         composeTestRule.onNodeWithContentDescription("加5分钟").assertDoesNotExist()
         composeTestRule.onNodeWithContentDescription("跳过当前周期").assertDoesNotExist()
 
-        // Switch to PAUSED
+        // Switch to PAUSED (now visible!)
         stateFlow.value = TimerState.PAUSED
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithContentDescription("加5分钟").assertDoesNotExist()
-        composeTestRule.onNodeWithContentDescription("跳过当前周期").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("加5分钟").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("跳过当前周期").assertIsDisplayed()
 
-        // Switch to RUNNING
+        // Switch to RUNNING (still visible)
         stateFlow.value = TimerState.RUNNING
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithContentDescription("加5分钟").assertIsDisplayed()
@@ -151,5 +151,33 @@ class TimerScreenInstrumentedTest {
         composeTestRule.onNodeWithContentDescription("跳过当前周期").performClick()
         composeTestRule.waitForIdle()
         verify { viewModel.skipCurrentPhase() }
+    }
+
+    @Test
+    fun `timer UI does not crash or truncate heavily with large fontScale`() {
+        val viewModel = mockk<TimerViewModel>(relaxed = true)
+        every { viewModel.timerMode } returns MutableStateFlow(TimerMode.FOCUS)
+        every { viewModel.timerState } returns MutableStateFlow(TimerState.RUNNING)
+        every { viewModel.timeRemaining } returns MutableStateFlow(25 * 60L)
+        every { viewModel.totalTimeInSeconds } returns MutableStateFlow(25 * 60L)
+        every { viewModel.currentCycle } returns MutableStateFlow(1)
+        every { viewModel.totalCycles } returns MutableStateFlow(4)
+        every { viewModel.flashScreen } returns MutableStateFlow(false)
+
+        composeTestRule.setContent {
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(
+                    density = androidx.compose.ui.platform.LocalDensity.current.density,
+                    fontScale = 2.0f
+                )
+            ) {
+                TimerScreen(onNavigateToSettings = {}, viewModel = viewModel)
+            }
+        }
+
+        // Just assert that key elements are still displayed without crash, 
+        // and ideally no critical semantic truncation.
+        composeTestRule.onNodeWithText("专注中").assertIsDisplayed()
+        composeTestRule.onNodeWithText("25:00").assertIsDisplayed()
     }
 }

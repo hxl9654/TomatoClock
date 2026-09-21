@@ -3,6 +3,8 @@ package com.hxlxz.tomatoclock
 import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.Handler
@@ -29,14 +31,20 @@ class AlarmPlayer @Inject constructor(
         context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
     }
     private val handler = Handler(Looper.getMainLooper())
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private var audioFocusRequest: AudioFocusRequest? = null
 
     /**
      * 【H-5修复】标记是否处于预览播放状态。
      * 当 [play] 被调用时立即置 false，使 [stopRunnable] 失效，
      * 避免先调用 [preview] 后再调用 [play]，
      * 残留的 2 秒延迟误停止正在响铃的报警声。
+     *
+     * [B-2修复] 暴露为 @VisibleForTesting internal，允许测试直接断言 flag 状态，
+     * 消除对副作用（振动）的间接断言，提升测试精确性和防御性。
      */
-    private var isPreviewActive = false
+    @androidx.annotation.VisibleForTesting
+    internal var isPreviewActive = false
 
     private val stopRunnable = Runnable {
         // 【H-5修复】只有仍处于预览状态时才停止
@@ -97,6 +105,7 @@ class AlarmPlayer @Inject constructor(
                                 if (mediaPlayer == it) {
                                     mediaPlayer = null
                                 }
+                                abandonAudioFocus()
                             } catch (e: Exception) {
                                 Log.e("AlarmPlayer", "Error releasing mediaPlayer: ${e.message}", e)
                             }
@@ -104,6 +113,7 @@ class AlarmPlayer @Inject constructor(
                     } else {
                         isLooping = true
                     }
+                    requestAudioFocus()
                     start()
                 }
             } catch (e: Exception) {
@@ -134,6 +144,7 @@ class AlarmPlayer @Inject constructor(
                 // 【L-2修复】预览时循环播放，并在 2 秒后由 stopRunnable 停止。
                 // 这是有意设计，确保短于 2 秒的音效也能被听到。
                 isLooping = true
+                requestAudioFocus()
                 start()
             }
             handler.postDelayed(stopRunnable, 2000L)
@@ -163,6 +174,7 @@ class AlarmPlayer @Inject constructor(
                 it.release()
             }
             mediaPlayer = null
+            abandonAudioFocus()
         } catch (e: Exception) {
             Log.e("AlarmPlayer", "Error releasing MediaPlayer on stop: ${e.message}", e)
         }
@@ -171,6 +183,47 @@ class AlarmPlayer @Inject constructor(
             vibrator.cancel()
         } catch (e: Exception) {
             Log.e("AlarmPlayer", "Error cancelling vibrator on stop: ${e.message}", e)
+        }
+    }
+
+    @SuppressLint("ObsoleteSdkInt")
+    private fun requestAudioFocus() {
+        // [C-2设计说明] 使用 AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK 而非 GAIN_TRANSIENT 是有意为之：
+        // MAY_DUCK 允许其他媒体（如音乐/导航）降低音量共存（鸭小龄山效果），
+        // 而 GAIN_TRANSIENT 会完全暂停其他音频。对于手机计时器报警场景，
+        // 用户希望可以听到提示音而不是强制暂停音乐，因此 MAY_DUCK 是更好的用户体验选择。
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                .build()
+            audioFocusRequest?.let { audioManager.requestAudioFocus(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(
+                null,
+                AudioManager.STREAM_ALARM,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+            )
+        }
+    }
+
+    @SuppressLint("ObsoleteSdkInt")
+    private fun abandonAudioFocus() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+                audioFocusRequest = null
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.abandonAudioFocus(null)
+            }
+        } catch (e: Exception) {
+            Log.e("AlarmPlayer", "Error abandoning audio focus: ${e.message}", e)
         }
     }
 }

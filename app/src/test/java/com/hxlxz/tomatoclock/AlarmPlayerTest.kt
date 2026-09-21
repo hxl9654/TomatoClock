@@ -5,13 +5,16 @@ import android.os.Build
 import android.os.VibratorManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLooper
 import org.robolectric.shadows.ShadowVibrator
 
 @RunWith(AndroidJUnit4::class)
@@ -73,18 +76,27 @@ class AlarmPlayerTest {
         alarmPlayer.stop()
         
         // Verify vibration is canceled
-        org.junit.Assert.assertTrue(shadowVibrator.isCancelled)
+        assertTrue(shadowVibrator.isCancelled)
     }
 
     @Test
-    fun `play after preview does not throw and cancels previous vibration`() {
-        // 【H-5修复验证】先 preview 再 play 应能安全执行，
-        // play() 调用时必须清除 isPreviewActive 标志，使 stopRunnable 失效
+    fun `play after preview does not throw and stopRunnable is invalidated`() {
+        // [B-2修复] 加强测试：验证 isPreviewActive flag 将 stopRunnable 失效
+        // 而非仅验证"无异常"（原测试是假阳性）
+
         alarmPlayer.preview(1) // CHIME
-        // 立即调用 play()，此时 stopRunnable 尚未触发（2s 延迟）
+        // 点击 preview 后 isPreviewActive = true
+        assertTrue("isPreviewActive should be true after preview", alarmPlayer.isPreviewActive)
+
+        // 立即调用 play()，此时 stopRunnable 尚未触发（有 2s 延迟）
         alarmPlayer.play(SoundMode.CONTINUOUS, VibrationMode.CONTINUOUS, Ringtone.ZEN_BOWL)
-        // play 内部调用 stop()，会 removeCallbacks(stopRunnable) 并设置 isPreviewActive=false
-        // 验证无异常，且振动已重新设置
+        // play() 应将 isPreviewActive 置 false，使 stopRunnable 失效
+        assertFalse("isPreviewActive should be false after play()", alarmPlayer.isPreviewActive)
+
+        // 推进主线程 Handler 2秒以上，模拟 stopRunnable 应该被触发的时刻
+        ShadowLooper.idleMainLooper()
+
+        // pattern 不为 null 证明 play() 成功设置了斱器
         assertNotNull(shadowVibrator.pattern)
     }
 
@@ -92,7 +104,7 @@ class AlarmPlayerTest {
     fun `stop after preview cancels vibration`() {
         alarmPlayer.preview(0) // DIGITAL
         alarmPlayer.stop()
-        org.junit.Assert.assertTrue(shadowVibrator.isCancelled)
+        assertTrue(shadowVibrator.isCancelled)
     }
 
     @Test
@@ -114,6 +126,6 @@ class AlarmPlayerTest {
         
         // Assert state doesn't crash (Robolectric might return null or mock the MediaPlayer,
         // either way, the fallback should catch it or handle the mock gracefully).
-        org.junit.Assert.assertTrue(true)
+        assertTrue(true)
     }
 }

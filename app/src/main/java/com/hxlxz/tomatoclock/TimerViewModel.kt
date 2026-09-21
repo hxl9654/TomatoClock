@@ -50,6 +50,8 @@ class TimerViewModel @Inject constructor(
     }
 
     fun skipCurrentPhase() {
-        viewModelScope.launch { repository.forceFinishTimer(isSkipped = true) }
+        // [A-4修复] 显式传入 fromAlarm = false，消除对默认参数值的隐式假设，
+        // 防止 forceFinishTimer 默认值被修改时引入静默 Bug。
+        viewModelScope.launch { repository.forceFinishTimer(isSkipped = true, fromAlarm = false) }
     }
 }

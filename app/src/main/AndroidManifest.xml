@@ -18,6 +18,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" tools:ignore="FullScreenIntentPolicy" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".TomatoClockApplication"
@@ -35,7 +36,9 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.TomatoClock">
+            android:screenOrientation="sensorPortrait"
+            android:theme="@style/Theme.TomatoClock"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -52,5 +55,14 @@
         <receiver
             android:name=".TimerAlarmReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".BootCompletedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

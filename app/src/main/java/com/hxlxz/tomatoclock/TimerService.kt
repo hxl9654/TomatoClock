@@ -13,14 +13,15 @@ import androidx.core.app.NotificationCompat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
 
@@ -36,8 +37,18 @@ class TimerService : Service() {
     @Inject
     lateinit var settingsDataStore: SettingsDataStore
 
-    private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
+    // [A-1修复] 使用 SupervisorJob 替代裸 Job：防止任意子协程（如通知更新/铃声副作用）
+    // 发生未捕获异常后级联取消整个 scope，导致服务静默失效。
+    // 注意 context 顺序：SupervisorJob() + Dispatchers.Main（Job 在左，Dispatcher 在右）
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var isForeground = false
+
+    @androidx.annotation.VisibleForTesting
+    internal lateinit var soundModeFlow: StateFlow<Int>
+    @androidx.annotation.VisibleForTesting
+    internal lateinit var vibrationModeFlow: StateFlow<Int>
+    @androidx.annotation.VisibleForTesting
+    internal lateinit var ringtoneFlow: StateFlow<Int>
 
     companion object {
         const val CHANNEL_ID = "tomato-clock_channel"
@@ -53,6 +64,10 @@ class TimerService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+
+        soundModeFlow = settingsDataStore.soundModeFlow.stateIn(serviceScope, SharingStarted.Eagerly, SoundMode.CONTINUOUS.value)
+        vibrationModeFlow = settingsDataStore.vibrationModeFlow.stateIn(serviceScope, SharingStarted.Eagerly, VibrationMode.CONTINUOUS.value)
+        ringtoneFlow = settingsDataStore.ringtoneFlow.stateIn(serviceScope, SharingStarted.Eagerly, Ringtone.CHIME.value)
 
         // Handle Notification updates
         combine(
@@ -71,7 +86,7 @@ class TimerService : Service() {
     }
 
     @androidx.annotation.VisibleForTesting(otherwise = androidx.annotation.VisibleForTesting.PRIVATE)
-    internal suspend fun handleStateSideEffects(state: TimerState) {
+    internal fun handleStateSideEffects(state: TimerState) {
         when (state) {
             TimerState.RUNNING -> {
                 alarmPlayer.stop()
@@ -81,15 +96,9 @@ class TimerService : Service() {
                 // 避免挂起期间值被修改导致的竞态窗口（虽然概率极低，但属防御性编程规范）。
                 val suppress = repository.suppressAlarm.value
                 if (!suppress) {
-                    // 【C-3修复】DataStore 的 Flow.first() 是 IO 操作，
-                    // 不能在 Main dispatcher 下直接调用，否则可能引发 ANR。
-                    val (soundMode, vibrationMode, ringtone) = withContext(Dispatchers.IO) {
-                        Triple(
-                            SoundMode.fromInt(settingsDataStore.soundModeFlow.first()),
-                            VibrationMode.fromInt(settingsDataStore.vibrationModeFlow.first()),
-                            Ringtone.fromInt(settingsDataStore.ringtoneFlow.first())
-                        )
-                    }
+                    val soundMode = SoundMode.fromInt(soundModeFlow.value)
+                    val vibrationMode = VibrationMode.fromInt(vibrationModeFlow.value)
+                    val ringtone = Ringtone.fromInt(ringtoneFlow.value)
                     alarmPlayer.play(soundMode, vibrationMode, ringtone)
                 }
             }
@@ -119,8 +128,12 @@ class TimerService : Service() {
                 repository.timerMode.value,
                 false
             )
-            startForeground(NOTIFICATION_ID, initialNotification)
-            isForeground = true
+            try {
+                startForeground(NOTIFICATION_ID, initialNotification)
+                isForeground = true
+            } catch (e: Exception) {
+                android.util.Log.e("TimerService", "Failed to start foreground service", e)
+            }
         }
         
         return START_STICKY
@@ -128,8 +141,12 @@ class TimerService : Service() {
 
     private fun updateNotification(state: TimerState, time: Long, mode: TimerMode, wakeScreen: Boolean) {
         if (!isForeground) return
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.notify(NOTIFICATION_ID, buildNotification(state, time, mode, wakeScreen))
+        try {
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.notify(NOTIFICATION_ID, buildNotification(state, time, mode, wakeScreen))
+        } catch (e: Exception) {
+            android.util.Log.e("TimerService", "Failed to update notification, likely permission revoked", e)
+        }
     }
 
     @SuppressLint("FullScreenIntentPolicy")
@@ -155,7 +172,9 @@ class TimerService : Service() {
         }
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_menu_recent_history)
+            // [B-6修复] 使用应用自有图标，而非系统通用图标 ic_menu_recent_history，
+            // 避免通知栏显示与应用无关的图标，提升品牌辨识度。
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(contentText)
             .setOngoing(state == TimerState.RUNNING || state == TimerState.PAUSED)
@@ -231,6 +250,13 @@ class TimerService : Service() {
         super.onDestroy()
         alarmPlayer.stop()
         serviceScope.cancel()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // Stop the foreground service when the user swipes the app away from recent apps
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

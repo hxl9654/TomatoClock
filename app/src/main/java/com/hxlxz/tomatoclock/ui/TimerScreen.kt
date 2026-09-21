@@ -184,7 +184,7 @@ fun TimerScreenContent(
         ) {
             
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (timerState == TimerState.RUNNING) {
+                if (timerState == TimerState.RUNNING || timerState == TimerState.PAUSED) {
                     FilledTonalIconButton(onClick = onAddFiveMinutes) {
                         Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add_time), tint = colorPrimary)
                     }
@@ -199,7 +199,7 @@ fun TimerScreenContent(
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 
-                if (timerState == TimerState.RUNNING) {
+                if (timerState == TimerState.RUNNING || timerState == TimerState.PAUSED) {
                     FilledTonalIconButton(onClick = onSkipPhase) {
                         Icon(Icons.Default.SkipNext, contentDescription = stringResource(R.string.action_skip_phase), tint = colorPrimary)
                     }

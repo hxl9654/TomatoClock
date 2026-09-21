@@ -39,9 +39,11 @@ class AndroidAlarmScheduler @Inject constructor(
                 return
             }
 
-            // triggerAtMillis is based on SystemClock.elapsedRealtime().
-            // AlarmManager.setAlarmClock uses RTC (Real Time Clock), i.e. System.currentTimeMillis().
-            // We must convert the elapsed time base to RTC base.
+            // [C-3注释] triggerAtMillis 基于 SystemClock.elapsedRealtime()（开机计时，不受系统时钟调整影响）。
+            // AlarmManager.setAlarmClock 使用 RTC（即 System.currentTimeMillis()），需要转换基准。
+            // 隐性假设：两行代码之间不会发生 NTP 校正导致 RTC 跳变。
+            // 影响评估：即使存在小幅偏移（通常 < 1秒），
+            // forceFinishTimer(fromAlarm=true) 的 2 秒容差保护已可应对大部分情局。
             val delayMs = triggerAtMillis - android.os.SystemClock.elapsedRealtime()
             val triggerAtRTC = System.currentTimeMillis() + delayMs
 
