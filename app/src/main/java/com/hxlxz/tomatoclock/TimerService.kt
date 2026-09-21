@@ -137,7 +137,11 @@ class TimerService : Service() {
     @androidx.annotation.VisibleForTesting
     internal fun startForegroundSafe(notification: Notification) {
         try {
-            startForeground(NOTIFICATION_ID, notification)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
             isForeground = true
         } catch (e: SecurityException) {
             // [SMELL-04修复] 仅捕获 SecurityException（Android 14+ 权限撤销场景），

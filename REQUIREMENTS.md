@@ -68,7 +68,7 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
 *   后台执行必须基于 **系统闹钟服务 (AlarmManager.setAlarmClock)** 配合 **全屏意图 (FullScreenIntent)**，彻底抛弃不可靠的 `PowerManager.PARTIAL_WAKE_LOCK`，保障应用切入后台或深度锁屏息屏时倒计时正常运行和强制唤醒亮屏。
 *   **后台与保活**：`TimerAlarmReceiver` 在被系统准时唤醒时，**会 startForegroundService 启动 TimerService**，这是接管状态并播放声音、震动的唯一手段，不可被移除。
     *   **Android 14+ 权限降级 (Graceful Degradation for FGS)**：由于 Android 14+ 对前台服务有严格限制，若用户收回了 `POST_NOTIFICATIONS` 等权限，导致 `startForeground()` 抛出 `SecurityException`，服务将立即调用 `stopSelf()` 自毁，避免触发系统级 10 秒超时崩溃 (`ForegroundServiceDidNotStartInTimeException`)。这种降级行为会导致通知静音，符合系统安全预期。
-*   **开机自启动恢复 (Boot Completed)**：设备重启后，依靠 `BootCompletedReceiver` 自动拉起进程，并通过 `TimerRepository` 的初始化逻辑恢复之前因重启而丢失的定时闹钟。
+*   **开机自启动恢复 (Boot Completed)**：设备重启后，依靠 `BootCompletedReceiver` 自动拉起进程，并通过 `TimerRepository` 的初始化逻辑恢复之前因重启而丢失的定时闹钟。此过程通过 `goAsync()` 和挂起函数 (`suspend`) 的协同机制，确保底层 DataStore 在异步恢复时进程不会被系统意外终止。
 *   **音频焦点 (Audio Focus)**：闹钟播放时通过 `AudioManager` 抢占系统音频焦点 (`AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`)，停止时必须释放，确保不与媒体应用冲突。
 *   **前台服务终止 (Task Removed)**：当用户从多任务列表中划掉应用时，`TimerService` 必须重写 `onTaskRemoved` 来停止自身，防止内存泄漏和电量浪费。
 *   不能使用 `Thread.sleep` 阻塞线程，状态流转必须通过 `StateFlow`。

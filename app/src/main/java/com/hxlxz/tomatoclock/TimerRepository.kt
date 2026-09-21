@@ -467,11 +467,9 @@ class TimerRepository @Inject constructor(
      *
      * 此方法为幂等操作：若 Repository 已初始化完成，将立即返回。
      */
-    fun ensureInitialized() {
-        scope.launch {
-            isInitialized.await()
-            Log.d("TimerRepository", "ensureInitialized: DataStore state restored and alarms rescheduled.")
-        }
+    suspend fun ensureInitialized() {
+        isInitialized.await()
+        Log.d("TimerRepository", "ensureInitialized: DataStore state restored and alarms rescheduled.")
     }
 
     @androidx.annotation.VisibleForTesting

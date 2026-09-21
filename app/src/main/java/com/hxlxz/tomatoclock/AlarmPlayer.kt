@@ -106,7 +106,9 @@ class AlarmPlayer @Inject constructor(
                                     mediaPlayer = null
                                 }
                                 abandonAudioFocus()
-                            } catch (e: Exception) {
+                            } catch (e: IllegalStateException) {
+                                Log.e("AlarmPlayer", "Error releasing mediaPlayer: ${e.message}", e)
+                            } catch (e: RuntimeException) {
                                 Log.e("AlarmPlayer", "Error releasing mediaPlayer: ${e.message}", e)
                             }
                         }
@@ -116,8 +118,14 @@ class AlarmPlayer @Inject constructor(
                     requestAudioFocus()
                     start()
                 }
-            } catch (e: Exception) {
-                Log.e("AlarmPlayer", "Error: ${e.message}", e)
+            } catch (e: java.io.IOException) {
+                Log.e("AlarmPlayer", "IO Error: ${e.message}", e)
+            } catch (e: IllegalStateException) {
+                Log.e("AlarmPlayer", "State Error: ${e.message}", e)
+            } catch (e: SecurityException) {
+                Log.e("AlarmPlayer", "Security Error: ${e.message}", e)
+            } catch (e: RuntimeException) {
+                Log.e("AlarmPlayer", "Runtime Error: ${e.message}", e)
             }
         }
     }
@@ -148,8 +156,14 @@ class AlarmPlayer @Inject constructor(
                 start()
             }
             handler.postDelayed(stopRunnable, 2000L)
-        } catch (e: Exception) {
-            Log.e("AlarmPlayer", "Error: ${e.message}", e)
+        } catch (e: java.io.IOException) {
+            Log.e("AlarmPlayer", "IO Error: ${e.message}", e)
+        } catch (e: IllegalStateException) {
+            Log.e("AlarmPlayer", "State Error: ${e.message}", e)
+        } catch (e: SecurityException) {
+            Log.e("AlarmPlayer", "Security Error: ${e.message}", e)
+        } catch (e: RuntimeException) {
+            Log.e("AlarmPlayer", "Runtime Error: ${e.message}", e)
         }
     }
 
@@ -175,13 +189,15 @@ class AlarmPlayer @Inject constructor(
             }
             mediaPlayer = null
             abandonAudioFocus()
-        } catch (e: Exception) {
+        } catch (e: IllegalStateException) {
+            Log.e("AlarmPlayer", "Error releasing MediaPlayer on stop: ${e.message}", e)
+        } catch (e: RuntimeException) {
             Log.e("AlarmPlayer", "Error releasing MediaPlayer on stop: ${e.message}", e)
         }
 
         try {
             vibrator.cancel()
-        } catch (e: Exception) {
+        } catch (e: RuntimeException) {
             Log.e("AlarmPlayer", "Error cancelling vibrator on stop: ${e.message}", e)
         }
     }
@@ -222,7 +238,7 @@ class AlarmPlayer @Inject constructor(
                 @Suppress("DEPRECATION")
                 audioManager.abandonAudioFocus(null)
             }
-        } catch (e: Exception) {
+        } catch (e: RuntimeException) {
             Log.e("AlarmPlayer", "Error abandoning audio focus: ${e.message}", e)
         }
     }
