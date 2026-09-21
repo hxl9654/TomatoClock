@@ -100,9 +100,9 @@ dependencies {
     testImplementation("androidx.test:core:1.6.1")
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("androidx.compose.ui:ui-test-manifest")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.12.0")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.12.0")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi-junit-rule:1.12.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.74.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.74.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-junit-rule:1.74.0")
 
     // Instrumented Tests
     androidTestImplementation("junit:junit:4.13.2")
