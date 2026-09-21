@@ -90,3 +90,27 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
     *   **防止状态泄漏 (State Bleeding)**：在 E2E 测试销毁阶段，必须显式调用 `TimerRepository.destroyForTesting()` 强制取消全局协程作用域，彻底阻断后台心跳任务跨测试向 DataStore 写入脏数据。
     *   **消除 UI 测试抖动 (Flaky Tests)**：对异步发布的状态变更（如 `StateFlow` 的状态跳转），禁止使用瞬时的 `assertIsDisplayed()`，必须使用轮询重试机制的 `waitUntilTextExists()` 来安全等待 UI 响应。
     *   **Mock 防御编程**：对 `TimerAlarmReceiver` 等需要被手动触发的组件，必须做可空安全调用（如 `pendingResult?.finish()`）以兼容无原生上下文的测试环境。
+
+## 6. 技术栈 (Tech Stack)
+*   **UI**: Jetpack Compose, Material 3
+*   **Architecture**: MVVM (Model-View-ViewModel) + Unidirectional Data Flow
+*   **Dependency Injection**: Dagger Hilt
+*   **Storage**: Jetpack DataStore (Preferences)
+*   **Concurrency**: Kotlin Coroutines & Flow
+*   **Background Execution / 后台执行**:
+    *   AlarmManager.setAlarmClock() — 系统级精确闹钟，绕过 Doze 模式，保障深度休眠下准时触发
+    *   TimerAlarmReceiver — 接收系统闹钟广播，采用 startForegroundService 主动拉起 Service 防止进程死亡时漏报
+    *   TimerService — 独立前台服务，利用 StateFlow 内存热缓存 (Eagerly caching) 偏好设置，实现 O(1) 的零延迟 (Zero-Latency) 响铃
+    *   FullScreenIntent — 在锁屏/息屏状态下弹出全屏通知唤醒用户
+
+## 7. 权限说明 (Permissions)
+*   POST_NOTIFICATIONS：用于在状态栏显示倒计时进度和前台服务通知。
+*   USE_EXACT_ALARM / SCHEDULE_EXACT_ALARM：用于设定精确的倒计时结束时间，确保息屏状态下准时提醒。**注意：在 Android 14 (API 34)+ 及 Google Play 政策中，此类权限受到严格审查，本应用符合 "Clock / Timer" 豁免类目。**
+*   FOREGROUND_SERVICE_SPECIAL_USE：在 Android 14+ 中声明特殊前台服务，并附带了具体的业务用途（计时与闹钟）。
+*   WAKE_LOCK / USE_FULL_SCREEN_INTENT：用于在倒计时结束时点亮屏幕并弹出提醒界面。
+*   VIBRATE：用于倒计时结束时的震动提醒。
+*   RECEIVE_BOOT_COMPLETED：用于设备重启后自动恢复因关机被清除的倒计时精准闹钟。
+
+## 8. 已知限制 (Known Limitations)
+*   **System Time Manipulation (系统时间篡改)**: The app persists absolute wall-clock time (System.currentTimeMillis()) for active timers to survive reboots. If the user manually changes the system time or timezone while a timer is running in the background, the timer behavior will be undefined (it may finish instantly or take much longer).
+*   **Test Environment (E2E测试环境)**: When running E2E Instrumented Tests (e.g., TomatoClockE2ETest), ensure that device animations are completely disabled in Developer Options (Window animation scale, Transition animation scale, Animator duration scale all set to Off) to prevent flaky test execution and timeout errors.
