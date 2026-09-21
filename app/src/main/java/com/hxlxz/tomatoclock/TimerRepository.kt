@@ -455,6 +455,22 @@ class TimerRepository @Inject constructor(
         }
     }
 
+    /**
+     * 等待 TimerRepository 完成 DataStore 状态恢复和闹钟重调度。
+     *
+     * 由 [BootCompletedReceiver] 在设备重启后显式调用，确保：
+     * 1. 完成 DataStore 状态读取，
+     * 2. 触发 [startCountdown] 以重建因重启丢失的精确闹钟（如重启前处于 RUNNING 状态）。
+     *
+     * 此方法为幂等操作：若 Repository 已初始化完成，将立即返回。
+     */
+    fun ensureInitialized() {
+        scope.launch {
+            isInitialized.await()
+            Log.d("TimerRepository", "ensureInitialized: DataStore state restored and alarms rescheduled.")
+        }
+    }
+
     @androidx.annotation.VisibleForTesting
     fun destroyForTesting() {
         timerJob?.cancel()

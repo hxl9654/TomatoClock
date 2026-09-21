@@ -139,8 +139,10 @@ class TimerService : Service() {
         try {
             startForeground(NOTIFICATION_ID, notification)
             isForeground = true
-        } catch (e: Exception) {
-            android.util.Log.e("TimerService", "Failed to start foreground service, gracefully stopping to prevent crash", e)
+        } catch (e: SecurityException) {
+            // [SMELL-04修复] 仅捕获 SecurityException（Android 14+ 权限撤销场景），
+            // 而非 Exception 基类，避免掩盖 NPE 等无关错误。
+            android.util.Log.e("TimerService", "Failed to start foreground service (SecurityException). Gracefully stopping to prevent ForegroundServiceDidNotStartInTimeException.", e)
             stopSelf()
         }
     }

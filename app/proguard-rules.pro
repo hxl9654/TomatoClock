@@ -22,13 +22,14 @@
 
 # ---- Tomatoes Clock Specific Rules ----
 
-# [H-6 / ProGuard] Keep DataStore Models and Enums to prevent serialization issues
--keep class com.hxlxz.tomatoclock.TimerState { *; }
--keep class com.hxlxz.tomatoclock.TimerMode { *; }
--keep class com.hxlxz.tomatoclock.SoundMode { *; }
--keep class com.hxlxz.tomatoclock.VibrationMode { *; }
--keep class com.hxlxz.tomatoclock.Ringtone { *; }
--keep class com.hxlxz.tomatoclock.SavedTimerState { *; }
+-keepclassmembers enum com.hxlxz.tomatoclock.* {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+    public int getValue();
+}
+-keepclassmembers class com.hxlxz.tomatoclock.SavedTimerState {
+    *;
+}
 
 # [Security & Performance] Strip all Log.d and Log.v in Release build
 -assumenosideeffects class android.util.Log {

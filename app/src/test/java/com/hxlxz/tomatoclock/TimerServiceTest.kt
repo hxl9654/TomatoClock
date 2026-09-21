@@ -152,21 +152,56 @@ class TimerServiceTest {
         io.mockk.unmockkStatic(android.util.Log::class)
     }
 
+    /**
+     * [BUG-01修复] 改用 spyk(timerService) 在真实服务实例上验证 startForegroundSafe 的行为。
+     *
+     * 原测试使用 mockk<TimerService>(relaxed=true) + callOriginal()，测试的是 mockk 框架
+     * 的代理行为，而非 Android Service 真实调用栈，属于假绿测试。
+     *
+     * 修复方案：spyk 包装真实 TimerService 实例，仅 stub startForeground() 抛出异常，
+     * 验证 stopSelf() 被调用，同时通过反射确认 isForeground 没有被置为 true。
+     */
     @Test
-    fun `startForegroundSafe stops service gracefully when startForeground throws Exception`() = runTest(testDispatcher) {
-        io.mockk.mockkStatic(android.util.Log::class)
-        every { android.util.Log.e(any(), any(), any()) } returns 0
+    fun `startForegroundSafe stops service gracefully when startForeground throws SecurityException`() =
+        runTest(testDispatcher) {
+            io.mockk.mockkStatic(android.util.Log::class)
+            every { android.util.Log.e(any(), any(), any()) } returns 0
 
-        val mockService = mockk<TimerService>(relaxed = true)
-        
-        every { mockService.startForegroundSafe(any()) } answers { callOriginal() }
-        every { mockService.startForeground(any<Int>(), any()) } throws SecurityException("Permission revoked")
-        every { mockService.stopSelf() } returns Unit
+            // 使用 spyk 包装真实实例，仅 override 会调用 Android Framework 的方法
+            val spyService = io.mockk.spyk(timerService)
+            every { spyService.startForeground(any<Int>(), any()) } throws SecurityException("Permission revoked")
+            every { spyService.stopSelf() } returns Unit
 
-        mockService.startForegroundSafe(mockk(relaxed = true))
+            spyService.startForegroundSafe(mockk(relaxed = true))
 
-        verify(exactly = 1) { mockService.stopSelf() }
-        
-        io.mockk.unmockkStatic(android.util.Log::class)
-    }
+            // 验证：异常发生时 stopSelf() 必须被调用一次
+            verify(exactly = 1) { spyService.stopSelf() }
+
+            // 验证：startForeground 抛异常后，isForeground 不应被置为 true
+            val isForegroundField = TimerService::class.java.getDeclaredField("isForeground")
+            isForegroundField.isAccessible = true
+            val isForegroundValue = isForegroundField.getBoolean(spyService)
+            assert(!isForegroundValue) { "isForeground should remain false when startForeground throws" }
+
+            io.mockk.unmockkStatic(android.util.Log::class)
+        }
+
+    @Test
+    fun `startForegroundSafe sets isForeground to true when startForeground succeeds`() =
+        runTest(testDispatcher) {
+            // 使用 spyk 包装真实实例，stub startForeground 让其成功（不抛异常）
+            val spyService = io.mockk.spyk(timerService)
+            every { spyService.startForeground(any<Int>(), any()) } returns Unit
+
+            spyService.startForegroundSafe(mockk(relaxed = true))
+
+            // 验证：成功时 isForeground 应被置为 true
+            val isForegroundField = TimerService::class.java.getDeclaredField("isForeground")
+            isForegroundField.isAccessible = true
+            val isForegroundValue = isForegroundField.getBoolean(spyService)
+            assert(isForegroundValue) { "isForeground should be true when startForeground succeeds" }
+
+            // 验证：成功时不应调用 stopSelf()
+            verify(exactly = 0) { spyService.stopSelf() }
+        }
 }

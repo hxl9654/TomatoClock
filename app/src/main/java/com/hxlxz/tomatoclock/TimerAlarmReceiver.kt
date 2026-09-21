@@ -33,7 +33,7 @@ class TimerAlarmReceiver : BroadcastReceiver() {
                 // [A-2修复] goAsync() 系统超时约 10 秒（API 34+），
                 // 此处设 8 秒 timeout 确保在系统强制 ANR 之前完成清理工作。
                 withTimeout(8.seconds) {
-                    repository.forceFinishTimer(fromAlarm = true)
+                    handleAlarm()
                 }
             } catch (e: TimeoutCancellationException) {
                 Log.e("TimerAlarmReceiver", "forceFinishTimer timed out after 8s, ANR risk avoided.", e)
@@ -43,5 +43,16 @@ class TimerAlarmReceiver : BroadcastReceiver() {
                 pendingResult?.finish()
             }
         }
+    }
+
+    /**
+     * 闹钟触发后的核心业务逻辑，提取为独立 suspend 方法以便单元测试。
+     *
+     * [BUG-03修复] 测试可直接调用此方法验证 forceFinishTimer 的调用，
+     * 绕开 @AndroidEntryPoint 的 Hilt 注入和 goAsync() 的复杂异步环境。
+     */
+    @androidx.annotation.VisibleForTesting
+    internal suspend fun handleAlarm() {
+        repository.forceFinishTimer(fromAlarm = true)
     }
 }

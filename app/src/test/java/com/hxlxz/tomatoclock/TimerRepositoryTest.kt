@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -34,6 +35,16 @@ class TimerRepositoryTest {
     fun setup() {
         mockkStatic(SystemClock::class)
         io.mockk.every { SystemClock.elapsedRealtime() } answers { testDispatcher.scheduler.currentTime }
+
+        // [TEST-01修复] 全局 mock android.util.Log，防止协程内的 Log.e/Log.d 调用抛出
+        // "Method not mocked" RuntimeException（JVM 单元测试环境下 Android Log 未实现）。
+        // 放在 @Before 而非逐个测试里，确保 persistStateAsync catch 块中的 Log.e
+        // 在 testDispatcher 调度的协程内也能被正常拦截。
+        mockkStatic(android.util.Log::class)
+        io.mockk.every { android.util.Log.e(any(), any()) } returns 0
+        io.mockk.every { android.util.Log.e(any(), any(), any()) } returns 0
+        io.mockk.every { android.util.Log.d(any(), any()) } returns 0
+        io.mockk.every { android.util.Log.w(any(), any<String>()) } returns 0
 
         Dispatchers.setMain(testDispatcher)
         mockDataStore = mockk(relaxed = true)
@@ -56,6 +67,7 @@ class TimerRepositoryTest {
     fun tearDown() {
         Dispatchers.resetMain()
         unmockkStatic(SystemClock::class)
+        unmockkStatic(android.util.Log::class)
     }
 
     @Test
@@ -851,10 +863,8 @@ class TimerRepositoryTest {
 
     @Test
     fun `clearStateAsync handles exception gracefully without crashing`() = runTest(testDispatcher) {
-        mockkStatic(android.util.Log::class)
-        io.mockk.every { android.util.Log.e(any(), any(), any()) } returns 0
-
         // Arrange: Make DataStore throw IOException when cleared
+        // （android.util.Log 已在 @Before setup() 中全局 mock，无需在此重复）
         coEvery { mockDataStore.clearTimerState() } throws java.io.IOException("Disk full")
 
         testScheduler.advanceUntilIdle()
@@ -862,29 +872,78 @@ class TimerRepositoryTest {
         testScheduler.runCurrent()
 
         // Act: Stop timer triggers clearStateAsync
-        // If exception is not properly swallowed inside the async launch, runTest will fail with an unhandled exception
+        // If exception is not properly caught inside the async launch, runTest will fail with an unhandled exception
         repository.stopTimer()
         testScheduler.advanceUntilIdle()
 
-        // Assert: It reaches here without crashing and state is IDLE
+        // Assert 1：测试能执行到此处 = IOException 被 clearStateAsync 内部捕获，未传播。
+        // Assert 2：计时器状态正确回到 IDLE。
         assertEquals(TimerState.IDLE, repository.timerState.value)
+        // Assert 3：验证异常被记录（符合 data_layer.md Rule#3 异常可见性要求）
+        io.mockk.verify(atLeast = 1) { android.util.Log.e(any(), any(), any()) }
     }
 
     @Test
     fun `persistStateAsync handles exception gracefully without crashing`() = runTest(testDispatcher) {
-        mockkStatic(android.util.Log::class)
-        io.mockk.every { android.util.Log.e(any(), any(), any()) } returns 0
-
         // Arrange: Make DataStore throw IOException when saving
         coEvery { mockDataStore.saveTimerState(any()) } throws java.io.IOException("Encryption error")
-        
+
         testScheduler.advanceUntilIdle()
-        
+
         // Act: Start timer triggers persistStateAsync
+        // If the exception is NOT caught inside persistStateAsync, runTest would propagate it and the test would fail here.
         repository.startTimer()
+        // [修复] 使用 runCurrent() 而非 advanceUntilIdle()：
+        // advanceUntilIdle() 会推进虚拟时间直到全部协程完成（包括25分钟倒计时），
+        // 导致状态变为 FINISHED，使后续 RUNNING 断言失败。
+        // runCurrent() 只执行当前已入队的任务（persistStateAsync 的 scope.launch），
+        // 不推进时间，保持计时器处于 RUNNING 状态。
         testScheduler.runCurrent()
-        
-        // Assert: Reaches here without crashing
+
+        // Assert 1：测试能执行到此处，说明 IOException 已被 persistStateAsync 内部捕获，
+        //           没有传播出来导致测试崩溃（即"gracefully 处理"的核心语义）。
+        // Assert 2：计时器状态仍为 RUNNING，说明 DataStore 异常不影响内存状态。
         assertEquals(TimerState.RUNNING, repository.timerState.value)
+        // Assert 3：saveTimerState 确实被调用了（触发了异常捕获路径），
+        //           与仅验证 Log.e 相比，此断言更能证明"异常来自持久化路径"。
+        // [TEST-01说明] 不使用 mockkStatic(Log) + verify(Log.e) 验证日志：
+        // mockkStatic 在 StandardTestDispatcher 的跨协程调度下不能稳定拦截，
+        // 会引发 "Method e in android.util.Log not mocked" 运行时异常，导致误报。
+        io.mockk.coVerify(atLeast = 1) { mockDataStore.saveTimerState(any()) }
+    }
+
+    @Test
+    fun `saveCurrentState performs IO outside of stateMutex to prevent deadlock`() = runTest(testDispatcher) {
+        // Arrange: Make saveTimerState suspend for a long time
+        coEvery { mockDataStore.saveTimerState(any()) } coAnswers {
+            kotlinx.coroutines.delay(5000L.milliseconds)
+        }
+        testScheduler.advanceUntilIdle() // Ensure init is done
+
+        // Act: Start saveCurrentState in a separate coroutine
+        val saveJob = backgroundScope.launch {
+            repository.saveCurrentState()
+        }
+
+        // Advance time just enough to enter the suspend function (delay in saveTimerState)
+        testScheduler.advanceTimeBy(100L) 
+
+        // At this point, saveCurrentState is suspended inside saveTimerState.
+        // If saveCurrentState holds stateMutex during saveTimerState, the following call will hang/deadlock
+        // because pauseTimer() also needs stateMutex.
+        var pauseTimerCompleted = false
+        val pauseJob = backgroundScope.launch {
+            repository.pauseTimer()
+            pauseTimerCompleted = true
+        }
+
+        testScheduler.runCurrent() // Run pauseTimer up to the point it either completes or blocks
+
+        // Assert: pauseTimer should complete immediately, meaning it didn't wait for saveCurrentState's lock
+        assertEquals(true, pauseTimerCompleted)
+
+        // Cleanup
+        saveJob.cancel()
+        pauseJob.cancel()
     }
 }

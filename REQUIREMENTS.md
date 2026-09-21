@@ -76,21 +76,33 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
 ## 5. 质量保证 (Quality Assurance)
 *   核心业务逻辑必须有 JUnit 单元测试覆盖：
     *   `TimerRepository`：计时流转、状态恢复、addTime、saveCurrentState、RUNNING/PAUSED/IDLE 分支。
+        *   **`saveCurrentState` 原子性快照**：必须有单元测试验证 DataStore IO 操作在 `stateMutex` 锁外执行，以防止潜在死锁技术债。
+        *   **异常捕获可见性**：`persistStateAsync` 和 `clearStateAsync` 捕获异常后，必须验证 `Log.e()` 被调用（或等价地验证触发路径），确保异常不被静默吞掉（data_layer.md Rule#3）。
     *   `SettingsDataStore`：读取与写入，默认值，如 ringtone、flashScreen。
     *   `AlarmPlayer`：play/preview/stop 行为契约（包含 H-5 修复的 preview 与 play 互斥）。
     *   `SettingsViewModel`、`TimerViewModel`：防抖行为预期。
+    *   `TimerService`：
+        *   `startForegroundSafe()` 必须使用 `spyk` 包装**真实实例**测试，禁止使用 `mockk<TimerService>(relaxed=true) + callOriginal()` 的假绿测试模式。
+        *   验证 `SecurityException` 时 `stopSelf()` 被调用且 `isForeground` 不被置 `true`；成功时相反。
+    *   `BootCompletedReceiver`：
+        *   正向：`ACTION_BOOT_COMPLETED`/`ACTION_LOCKED_BOOT_COMPLETED` 均触发 `handleBootCompleted()`。
+        *   反向：无关 Action 不触发（禁止无断言的哑炮测试）。
+        *   核心行为：`handleBootCompleted()` 必须显式调用 `repository.ensureInitialized()`，不依赖 Hilt 注入的隐式副作用。
+    *   `TimerAlarmReceiver`：
+        *   `handleAlarm()` 必须调用 `repository.forceFinishTimer(fromAlarm = true)`。
 *   必须有仪器化跑通 Emulator 的端到端 (E2E) 验证：
     *   计时从 IDLE 到 RUNNING 到 FINISHED 到 下一阶段。
     *   暂停/继续/停止
     *   快进跳过
     *   进程死亡与后台恢复 (Process Death and Restore) 测试。
     *   字体缩放 (Font Scale) 兼容性测试。
-*   视觉回归测试 (VRT)：覆盖 IDLE/RUNNING/PAUSED/FINISHED 在 FOCUS/SHORT_BREAK/LONG_BREAK 的关键帧快照，以及设置页 (SettingsScreen) 的快照，包括**深色模式 (Dark Theme)**。
+*   视觉回归测试 (VRT)：覆盖 IDLE/RUNNING/PAUSED/FINISHED 在 FOCUS/SHORT_BREAK/LONG_BREAK 的关键帧快照，以及设置页 (SettingsScreen) 的快照，包括**深色模式 (Dark Theme)**。VRT 测试参数必须使用枚举 `.value` 属性，禁止魔法数字。
 *   针对测试环境，引入加速机制 (Time Multiplier) 确保 E2E 测试在合理时间内完成。
 *   **测试隔离与稳定性 (Test Isolation & Determinism)**：
     *   **防止状态泄漏 (State Bleeding)**：在 E2E 测试销毁阶段，必须显式调用 `TimerRepository.destroyForTesting()` 强制取消全局协程作用域，彻底阻断后台心跳任务跨测试向 DataStore 写入脏数据。
     *   **消除 UI 测试抖动 (Flaky Tests)**：对异步发布的状态变更（如 `StateFlow` 的状态跳转），禁止使用瞬时的 `assertIsDisplayed()`，必须使用轮询重试机制的 `waitUntilTextExists()` 来安全等待 UI 响应。
     *   **Mock 防御编程**：对 `TimerAlarmReceiver` 等需要被手动触发的组件，必须做可空安全调用（如 `pendingResult?.finish()`）以兼容无原生上下文的测试环境。
+    *   **Android Log Mock 规范**：JVM 单元测试中当协程 catch 块调用 `android.util.Log.*` 时，必须在 `@Before` 全局 `mockkStatic(android.util.Log::class)`，不得仅在单个测试内 mock，以防 `StandardTestDispatcher` 跨协程调度的 "not mocked" 误报。
 *   **安全性与稳定性测试 (Monkey Test)**：
     *   提供 `script/run_monkey.ps1` 进行高强度随机乱点测试。
     *   基于 `adb shell am task lock` 实现屏幕固定（Screen Pinning），利用 `--pct-syskeys 0` 与 `--pct-anyevent 0` 等屏蔽系统意图，将应用置于无法逃脱的单应用沙盒中，彻底验证应用在高频、非常规事件流下的状态机鲁棒性。
