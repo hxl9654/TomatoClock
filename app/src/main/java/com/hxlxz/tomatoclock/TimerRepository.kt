@@ -10,14 +10,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 @Singleton
 class TimerRepository @Inject constructor(
@@ -401,21 +401,23 @@ class TimerRepository @Inject constructor(
      * 注意：此函数是 `suspend` 的；非挂起调用场景请使用 [persistStateAsync]。
      */
     suspend fun saveCurrentState() {
-        val state = _timerState.value
-        val mode = _timerMode.value
-        val targetEndTimeWallClock = if (state == TimerState.RUNNING) {
-            System.currentTimeMillis() + (targetEndTimeMs - SystemClock.elapsedRealtime())
-        } else 0L
+        val savedState = stateMutex.withLock {
+            val state = _timerState.value
+            val mode = _timerMode.value
+            val targetEndTimeWallClock = if (state == TimerState.RUNNING) {
+                System.currentTimeMillis() + (targetEndTimeMs - SystemClock.elapsedRealtime())
+            } else 0L
 
-        val savedState = SavedTimerState(
-            state = state,
-            mode = mode,
-            targetEndTimeWallClock = targetEndTimeWallClock,
-            pausedTimeRemaining = pausedTimeRemainingSeconds,
-            currentCycle = _currentCycle.value,
-            lastSavedTimestamp = System.currentTimeMillis(),
-            totalTimeInSeconds = _totalTimeInSeconds.value // 【H-4修复】保存当前总时长
-        )
+            SavedTimerState(
+                state = state,
+                mode = mode,
+                targetEndTimeWallClock = targetEndTimeWallClock,
+                pausedTimeRemaining = pausedTimeRemainingSeconds,
+                currentCycle = _currentCycle.value,
+                lastSavedTimestamp = System.currentTimeMillis(),
+                totalTimeInSeconds = _totalTimeInSeconds.value // 【H-4修复】保存当前总时长
+            )
+        }
         settingsDataStore.saveTimerState(savedState)
     }
 

@@ -846,4 +846,45 @@ class TimerRepositoryTest {
         assertEquals(totalBefore, repository.totalTimeInSeconds.value)
         repository.pauseTimer()
     }
+
+    // ── 异常捕获安全测试 ───────────────────────────────────────────
+
+    @Test
+    fun `clearStateAsync handles exception gracefully without crashing`() = runTest(testDispatcher) {
+        mockkStatic(android.util.Log::class)
+        io.mockk.every { android.util.Log.e(any(), any(), any()) } returns 0
+
+        // Arrange: Make DataStore throw IOException when cleared
+        coEvery { mockDataStore.clearTimerState() } throws java.io.IOException("Disk full")
+
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+
+        // Act: Stop timer triggers clearStateAsync
+        // If exception is not properly swallowed inside the async launch, runTest will fail with an unhandled exception
+        repository.stopTimer()
+        testScheduler.advanceUntilIdle()
+
+        // Assert: It reaches here without crashing and state is IDLE
+        assertEquals(TimerState.IDLE, repository.timerState.value)
+    }
+
+    @Test
+    fun `persistStateAsync handles exception gracefully without crashing`() = runTest(testDispatcher) {
+        mockkStatic(android.util.Log::class)
+        io.mockk.every { android.util.Log.e(any(), any(), any()) } returns 0
+
+        // Arrange: Make DataStore throw IOException when saving
+        coEvery { mockDataStore.saveTimerState(any()) } throws java.io.IOException("Encryption error")
+        
+        testScheduler.advanceUntilIdle()
+        
+        // Act: Start timer triggers persistStateAsync
+        repository.startTimer()
+        testScheduler.runCurrent()
+        
+        // Assert: Reaches here without crashing
+        assertEquals(TimerState.RUNNING, repository.timerState.value)
+    }
 }

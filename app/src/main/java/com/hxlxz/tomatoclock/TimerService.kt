@@ -128,15 +128,21 @@ class TimerService : Service() {
                 repository.timerMode.value,
                 false
             )
-            try {
-                startForeground(NOTIFICATION_ID, initialNotification)
-                isForeground = true
-            } catch (e: Exception) {
-                android.util.Log.e("TimerService", "Failed to start foreground service", e)
-            }
+            startForegroundSafe(initialNotification)
         }
         
         return START_STICKY
+    }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun startForegroundSafe(notification: Notification) {
+        try {
+            startForeground(NOTIFICATION_ID, notification)
+            isForeground = true
+        } catch (e: Exception) {
+            android.util.Log.e("TimerService", "Failed to start foreground service, gracefully stopping to prevent crash", e)
+            stopSelf()
+        }
     }
 
     private fun updateNotification(state: TimerState, time: Long, mode: TimerMode, wakeScreen: Boolean) {
