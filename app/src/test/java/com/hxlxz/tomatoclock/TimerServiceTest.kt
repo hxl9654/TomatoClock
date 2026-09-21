@@ -151,4 +151,22 @@ class TimerServiceTest {
         
         io.mockk.unmockkStatic(android.util.Log::class)
     }
+
+    @Test
+    fun `startForegroundSafe stops service gracefully when startForeground throws Exception`() = runTest(testDispatcher) {
+        io.mockk.mockkStatic(android.util.Log::class)
+        every { android.util.Log.e(any(), any(), any()) } returns 0
+
+        val mockService = mockk<TimerService>(relaxed = true)
+        
+        every { mockService.startForegroundSafe(any()) } answers { callOriginal() }
+        every { mockService.startForeground(any<Int>(), any()) } throws SecurityException("Permission revoked")
+        every { mockService.stopSelf() } returns Unit
+
+        mockService.startForegroundSafe(mockk(relaxed = true))
+
+        verify(exactly = 1) { mockService.stopSelf() }
+        
+        io.mockk.unmockkStatic(android.util.Log::class)
+    }
 }

@@ -67,6 +67,7 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
 *   **初始化同步机制**：`TimerRepository` 必须使用 `CompletableDeferred` 等机制阻塞并等待底层 DataStore 状态恢复完毕后，再允许响应外部的公共方法调用（如 `startTimer` 等），避免因异步恢复导致竞态条件及状态异常。
 *   后台执行必须基于 **系统闹钟服务 (AlarmManager.setAlarmClock)** 配合 **全屏意图 (FullScreenIntent)**，彻底抛弃不可靠的 `PowerManager.PARTIAL_WAKE_LOCK`，保障应用切入后台或深度锁屏息屏时倒计时正常运行和强制唤醒亮屏。
 *   **后台与保活**：`TimerAlarmReceiver` 在被系统准时唤醒时，**会 startForegroundService 启动 TimerService**，这是接管状态并播放声音、震动的唯一手段，不可被移除。
+    *   **Android 14+ 权限降级 (Graceful Degradation for FGS)**：由于 Android 14+ 对前台服务有严格限制，若用户收回了 `POST_NOTIFICATIONS` 等权限，导致 `startForeground()` 抛出 `SecurityException`，服务将立即调用 `stopSelf()` 自毁，避免触发系统级 10 秒超时崩溃 (`ForegroundServiceDidNotStartInTimeException`)。这种降级行为会导致通知静音，符合系统安全预期。
 *   **开机自启动恢复 (Boot Completed)**：设备重启后，依靠 `BootCompletedReceiver` 自动拉起进程，并通过 `TimerRepository` 的初始化逻辑恢复之前因重启而丢失的定时闹钟。
 *   **音频焦点 (Audio Focus)**：闹钟播放时通过 `AudioManager` 抢占系统音频焦点 (`AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`)，停止时必须释放，确保不与媒体应用冲突。
 *   **前台服务终止 (Task Removed)**：当用户从多任务列表中划掉应用时，`TimerService` 必须重写 `onTaskRemoved` 来停止自身，防止内存泄漏和电量浪费。
@@ -84,12 +85,15 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
     *   快进跳过
     *   进程死亡与后台恢复 (Process Death and Restore) 测试。
     *   字体缩放 (Font Scale) 兼容性测试。
-*   视觉回归测试 (VRT)：覆盖 IDLE/RUNNING/PAUSED/FINISHED 在 FOCUS/SHORT_BREAK/LONG_BREAK 的关键帧快照，包括**深色模式 (Dark Theme)**。
+*   视觉回归测试 (VRT)：覆盖 IDLE/RUNNING/PAUSED/FINISHED 在 FOCUS/SHORT_BREAK/LONG_BREAK 的关键帧快照，以及设置页 (SettingsScreen) 的快照，包括**深色模式 (Dark Theme)**。
 *   针对测试环境，引入加速机制 (Time Multiplier) 确保 E2E 测试在合理时间内完成。
 *   **测试隔离与稳定性 (Test Isolation & Determinism)**：
     *   **防止状态泄漏 (State Bleeding)**：在 E2E 测试销毁阶段，必须显式调用 `TimerRepository.destroyForTesting()` 强制取消全局协程作用域，彻底阻断后台心跳任务跨测试向 DataStore 写入脏数据。
     *   **消除 UI 测试抖动 (Flaky Tests)**：对异步发布的状态变更（如 `StateFlow` 的状态跳转），禁止使用瞬时的 `assertIsDisplayed()`，必须使用轮询重试机制的 `waitUntilTextExists()` 来安全等待 UI 响应。
     *   **Mock 防御编程**：对 `TimerAlarmReceiver` 等需要被手动触发的组件，必须做可空安全调用（如 `pendingResult?.finish()`）以兼容无原生上下文的测试环境。
+*   **安全性与稳定性测试 (Monkey Test)**：
+    *   提供 `script/run_monkey.ps1` 进行高强度随机乱点测试。
+    *   基于 `adb shell am task lock` 实现屏幕固定（Screen Pinning），利用 `--pct-syskeys 0` 与 `--pct-anyevent 0` 等屏蔽系统意图，将应用置于无法逃脱的单应用沙盒中，彻底验证应用在高频、非常规事件流下的状态机鲁棒性。
 
 ## 6. 技术栈 (Tech Stack)
 *   **UI**: Jetpack Compose, Material 3

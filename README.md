@@ -21,10 +21,10 @@
 ### 📸 Screenshots
 
 <p align="center">
-  <img src="screenshots/idle.png" width="250" alt="Idle State">
-  <img src="screenshots/running.png" width="250" alt="Running State">
-  <img src="screenshots/dark_mode.png" width="250" alt="Dark Mode">
-  <img src="screenshots/settings.png" width="250" alt="Settings">
+  <img src="app/src/test/roborazzi/com.hxlxz.tomatoclock.TimerScreenVrtTest.testTimerScreenIdleSnapshot_withNewLabel.png" width="250" alt="Idle State">
+  <img src="app/src/test/roborazzi/com.hxlxz.tomatoclock.TimerScreenVrtTest.testTimerScreenRunningSnapshot.png" width="250" alt="Running State">
+  <img src="app/src/test/roborazzi/com.hxlxz.tomatoclock.TimerScreenVrtTest.testTimerScreenDarkModeSnapshot.png" width="250" alt="Dark Mode">
+  <img src="app/src/test/roborazzi/com.hxlxz.tomatoclock.SettingsScreenVrtTest.testSettingsScreenSnapshot.png" width="250" alt="Settings">
 </p>
 
 ### ✨ Features
@@ -65,10 +65,10 @@ This project is licensed under the **GNU General Public License v3.0 (GPLv3)**.
 ### 📸 截图预览
 
 <p align="center">
-  <img src="screenshots/idle.png" width="250" alt="空闲状态">
-  <img src="screenshots/running.png" width="250" alt="计时中">
-  <img src="screenshots/dark_mode.png" width="250" alt="深色模式">
-  <img src="screenshots/settings.png" width="250" alt="设置页">
+  <img src="app/src/test/roborazzi/com.hxlxz.tomatoclock.TimerScreenVrtTest.testTimerScreenIdleSnapshot_withNewLabel.png" width="250" alt="空闲状态">
+  <img src="app/src/test/roborazzi/com.hxlxz.tomatoclock.TimerScreenVrtTest.testTimerScreenRunningSnapshot.png" width="250" alt="计时中">
+  <img src="app/src/test/roborazzi/com.hxlxz.tomatoclock.TimerScreenVrtTest.testTimerScreenDarkModeSnapshot.png" width="250" alt="深色模式">
+  <img src="app/src/test/roborazzi/com.hxlxz.tomatoclock.SettingsScreenVrtTest.testSettingsScreenSnapshot.png" width="250" alt="设置页">
 </p>
 
 ### ✨ 核心功能

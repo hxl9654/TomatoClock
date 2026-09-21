@@ -32,7 +32,8 @@ configure<ApplicationExtension> {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -58,6 +59,10 @@ configure<ApplicationExtension> {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+roborazzi {
+    outputDir.set(file("src/test/roborazzi"))
 }
 
 dependencies {
@@ -91,24 +96,24 @@ dependencies {
     testImplementation("app.cash.turbine:turbine:1.2.1")
     
     // Local Unit Tests (Robolectric & Compose)
-    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("org.robolectric:robolectric:4.17")
     testImplementation("androidx.test.ext:junit:1.2.1")
-    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.test:core:1.7.0")
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("androidx.compose.ui:ui-test-manifest")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.12.0")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.12.0")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi-junit-rule:1.12.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.74.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.74.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-junit-rule:1.74.0")
 
     // Instrumented Tests
     androidTestImplementation("junit:junit:4.13.2")
     androidTestImplementation("io.mockk:mockk-android:1.14.11")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test:core:1.6.1")
-    androidTestImplementation("androidx.test:rules:1.6.1")
+    androidTestImplementation("androidx.test:core:1.7.0")
+    androidTestImplementation("androidx.test:rules:1.7.0")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
-    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.4.0")
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")

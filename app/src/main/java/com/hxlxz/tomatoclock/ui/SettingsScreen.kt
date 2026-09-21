@@ -37,7 +37,6 @@ fun SettingsScreen(
     ),
     onNavigateBack: () -> Unit
 ) {
-
     val focusTime by viewModel.focusTimeFlow.collectAsStateWithLifecycle(initialValue = 25)
     val shortBreakTime by viewModel.shortBreakTimeFlow.collectAsStateWithLifecycle(initialValue = 5)
     val longBreakTime by viewModel.longBreakTimeFlow.collectAsStateWithLifecycle(initialValue = 15)
@@ -50,6 +49,58 @@ fun SettingsScreen(
     val vibrationMode by viewModel.vibrationModeFlow.collectAsStateWithLifecycle(initialValue = 0)
     val ringtone by viewModel.ringtoneFlow.collectAsStateWithLifecycle(initialValue = 1)
 
+    SettingsScreenContent(
+        focusTime = focusTime,
+        shortBreakTime = shortBreakTime,
+        longBreakTime = longBreakTime,
+        cycles = cycles,
+        snoozeTime = snoozeTime,
+        wakeScreen = wakeScreen,
+        flashScreen = flashScreen,
+        soundMode = soundMode,
+        vibrationMode = vibrationMode,
+        ringtone = ringtone,
+        onNavigateBack = onNavigateBack,
+        onFocusTimeChange = { viewModel.saveFocusTime(it) },
+        onShortBreakTimeChange = { viewModel.saveShortBreakTime(it) },
+        onLongBreakTimeChange = { viewModel.saveLongBreakTime(it) },
+        onCyclesChange = { viewModel.saveCycles(it) },
+        onSnoozeTimeChange = { viewModel.saveSnoozeTime(it) },
+        onWakeScreenChange = { viewModel.saveWakeScreen(it) },
+        onFlashScreenChange = { viewModel.saveFlashScreen(it) },
+        onSoundModeChange = { viewModel.saveSoundMode(it) },
+        onVibrationModeChange = { viewModel.saveVibrationMode(it) },
+        onRingtoneChange = { viewModel.saveRingtone(it) },
+        onRingtonePreview = { viewModel.previewRingtone(it) }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreenContent(
+    focusTime: Int,
+    shortBreakTime: Int,
+    longBreakTime: Int,
+    cycles: Int,
+    snoozeTime: Int,
+    wakeScreen: Boolean,
+    flashScreen: Boolean,
+    soundMode: Int,
+    vibrationMode: Int,
+    ringtone: Int,
+    onNavigateBack: () -> Unit,
+    onFocusTimeChange: (Int) -> Unit,
+    onShortBreakTimeChange: (Int) -> Unit,
+    onLongBreakTimeChange: (Int) -> Unit,
+    onCyclesChange: (Int) -> Unit,
+    onSnoozeTimeChange: (Int) -> Unit,
+    onWakeScreenChange: (Boolean) -> Unit,
+    onFlashScreenChange: (Boolean) -> Unit,
+    onSoundModeChange: (Int) -> Unit,
+    onVibrationModeChange: (Int) -> Unit,
+    onRingtoneChange: (Int) -> Unit,
+    onRingtonePreview: (Int) -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -80,35 +131,35 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_focus_time),
                 value = focusTime,
                 valueRange = 1..120,
-                onValueChange = { viewModel.saveFocusTime(it) }
+                onValueChange = onFocusTimeChange
             )
 
             NumberInputSetting(
                 label = stringResource(R.string.settings_short_break),
                 value = shortBreakTime,
                 valueRange = 1..30,
-                onValueChange = { viewModel.saveShortBreakTime(it) }
+                onValueChange = onShortBreakTimeChange
             )
 
             NumberInputSetting(
                 label = stringResource(R.string.settings_long_break),
                 value = longBreakTime,
                 valueRange = 1..60,
-                onValueChange = { viewModel.saveLongBreakTime(it) }
+                onValueChange = onLongBreakTimeChange
             )
 
             NumberInputSetting(
                 label = stringResource(R.string.settings_cycles),
                 value = cycles,
                 valueRange = 1..10,
-                onValueChange = { viewModel.saveCycles(it) }
+                onValueChange = onCyclesChange
             )
 
             NumberInputSetting(
                 label = stringResource(R.string.settings_snooze_time),
                 value = snoozeTime,
                 valueRange = 1..30,
-                onValueChange = { viewModel.saveSnoozeTime(it) }
+                onValueChange = onSnoozeTimeChange
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -122,13 +173,13 @@ fun SettingsScreen(
             SwitchSetting(
                 label = stringResource(R.string.settings_wake_screen),
                 checked = wakeScreen,
-                onCheckedChange = { viewModel.saveWakeScreen(it) }
+                onCheckedChange = onWakeScreenChange
             )
             
             SwitchSetting(
                 label = stringResource(R.string.settings_flash_screen),
                 checked = flashScreen,
-                onCheckedChange = { viewModel.saveFlashScreen(it) }
+                onCheckedChange = onFlashScreenChange
             )
 
             val soundModeOptions = listOf(
@@ -141,7 +192,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_sound_mode),
                 options = soundModeOptions,
                 selectedIndex = soundMode,
-                onOptionSelected = { viewModel.saveSoundMode(it) }
+                onOptionSelected = onSoundModeChange
             )
 
             val vibrationModeOptions = listOf(
@@ -154,7 +205,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_vibration_mode),
                 options = vibrationModeOptions,
                 selectedIndex = vibrationMode,
-                onOptionSelected = { viewModel.saveVibrationMode(it) }
+                onOptionSelected = onVibrationModeChange
             )
             
             val ringtoneOptions = listOf(
@@ -170,8 +221,8 @@ fun SettingsScreen(
                 options = ringtoneOptions,
                 selectedIndex = ringtone,
                 onOptionSelected = { 
-                    viewModel.saveRingtone(it) 
-                    viewModel.previewRingtone(it)
+                    onRingtoneChange(it) 
+                    onRingtonePreview(it)
                 }
             )
         }
