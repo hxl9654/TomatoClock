@@ -4,9 +4,9 @@
 <h1 align="center">TomatoClock (番茄钟)</h1>
 
 <p align="center">
-  <a href="https://github.com/your-username/TomatoClock/actions"><img src="https://img.shields.io/github/actions/workflow/status/your-username/TomatoClock/release.yml?logo=github" alt="Build Status"></a>
-  <a href="https://github.com/your-username/TomatoClock/releases"><img src="https://img.shields.io/github/v/release/your-username/TomatoClock" alt="Release"></a>
-  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-1.9.0-blue.svg?logo=kotlin" alt="Kotlin"></a>
+  <a href="https://github.com/hxl9654/TomatoClock/actions"><img src="https://img.shields.io/github/actions/workflow/status/hxl9654/TomatoClock/release.yml?logo=github" alt="Build Status"></a>
+  <a href="https://github.com/hxl9654/TomatoClock/releases"><img src="https://img.shields.io/github/v/release/hxl9654/TomatoClock" alt="Release"></a>
+  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.0-blue.svg?logo=kotlin" alt="Kotlin"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License"></a>
 </p>
 
