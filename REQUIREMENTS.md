@@ -84,7 +84,7 @@ TomatoClock 是一款基于番茄工作法的辅助计时工具，旨在帮助�
     *   快进跳过
     *   进程死亡与后台恢复 (Process Death and Restore) 测试。
     *   字体缩放 (Font Scale) 兼容性测试。
-*   视觉回归测试 (VRT)：覆盖 IDLE/RUNNING/PAUSED/FINISHED 在 FOCUS/SHORT_BREAK/LONG_BREAK 的关键帧快照，包括**深色模式 (Dark Theme)**。
+*   视觉回归测试 (VRT)：覆盖 IDLE/RUNNING/PAUSED/FINISHED 在 FOCUS/SHORT_BREAK/LONG_BREAK 的关键帧快照，以及设置页 (SettingsScreen) 的快照，包括**深色模式 (Dark Theme)**。
 *   针对测试环境，引入加速机制 (Time Multiplier) 确保 E2E 测试在合理时间内完成。
 *   **测试隔离与稳定性 (Test Isolation & Determinism)**：
     *   **防止状态泄漏 (State Bleeding)**：在 E2E 测试销毁阶段，必须显式调用 `TimerRepository.destroyForTesting()` 强制取消全局协程作用域，彻底阻断后台心跳任务跨测试向 DataStore 写入脏数据。

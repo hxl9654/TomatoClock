@@ -17,7 +17,7 @@ import androidx.test.core.app.ApplicationProvider
 import android.content.Context
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], qualifiers = RobolectricDeviceQualifiers.Pixel5)
+@Config(sdk = [34], qualifiers = "zh-rCN-" + RobolectricDeviceQualifiers.Pixel5)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class TimerScreenVrtTest {
 
