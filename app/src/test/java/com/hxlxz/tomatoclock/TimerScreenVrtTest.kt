@@ -13,6 +13,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import com.hxlxz.tomatoclock.ui.TimerScreenContent
+import androidx.test.core.app.ApplicationProvider
+import android.content.Context
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = RobolectricDeviceQualifiers.Pixel5)
@@ -73,8 +75,9 @@ class TimerScreenVrtTest {
             }
         }
         
-        composeTestRule.onNodeWithContentDescription("加5分钟").assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription("跳过当前周期").assertIsDisplayed()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.action_add_time)).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.action_skip_phase)).assertIsDisplayed()
         
         composeTestRule.onRoot().captureRoboImage()
     }
@@ -217,7 +220,8 @@ class TimerScreenVrtTest {
             }
         }
 
-        composeTestRule.onNodeWithContentDescription("设置").assertIsDisplayed()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.settings_title)).assertIsDisplayed()
         composeTestRule.onRoot().captureRoboImage()
     }
 

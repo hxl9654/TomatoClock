@@ -48,6 +48,10 @@ configure<ApplicationExtension> {
     }
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            it.systemProperty("user.language", "zh")
+            it.systemProperty("user.country", "CN")
+        }
     }
     packaging {
         resources {

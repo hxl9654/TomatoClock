@@ -1,0 +1,76 @@
+<resources>
+    <string name="app_name">TomatoClock</string>
+    
+    <!-- Timer States -->
+    <string name="state_idle">Ready to Start</string>
+    <string name="state_focus">Focusing</string>
+    <string name="state_short_break">Short Break</string>
+    <string name="state_long_break">Long Break</string>
+    <string name="state_paused">Paused</string>
+    <string name="state_finished_focus">Focus Finished!</string>
+    <string name="state_finished_break">Break Finished!</string>
+    <!-- 未开始时，按模式显示不同提示 -->
+    <string name="state_idle_focus">Ready to Focus</string>
+    <string name="state_idle_short_break">Ready for Short Break</string>
+    <string name="state_idle_long_break">Ready for Long Break</string>
+    <!-- 暂停时，按模式显示不同提示 -->
+    <string name="state_paused_focus">Focus Paused</string>
+    <string name="state_paused_short_break">Short Break Paused</string>
+    <string name="state_paused_long_break">Long Break Paused</string>
+    <string name="cycle_count">Cycle %1$d / %2$d</string>
+
+    <!-- Controls -->
+    <string name="action_start">Start</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_next">Start Next Phase</string>
+    <string name="action_snooze">Postpone</string>
+    
+    <!-- 通知栏专用短文字（空间有限） -->
+    <string name="action_next_short">Next Phase</string>
+    <string name="action_add_time">+5 Min</string>
+    <string name="action_skip_phase">Skip Phase</string>
+    
+    <!-- 通知栏正文 -->
+    <string name="notification_idle">Tap to start timer</string>
+    <string name="notification_running">%1$s remaining</string>
+    <string name="notification_paused">Paused · %1$s remaining</string>
+    <string name="notification_finished_focus">Focus finished, ready for a break!</string>
+    <string name="notification_finished_break">Break finished, ready to focus!</string>
+    
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="navigate_back">Back</string>
+    <string name="settings_durations">Durations (Minutes)</string>
+    <string name="settings_focus_time">Focus Duration</string>
+    <string name="settings_short_break">Short Break Duration</string>
+    <string name="settings_long_break">Long Break Duration</string>
+    <string name="settings_cycles">Cycles before Long Break</string>
+    <string name="settings_snooze_time">Postpone Duration</string>
+    <string name="settings_behavior">Behavior &amp; Alerts</string>
+    <string name="settings_wake_screen">Wake screen when timer finishes</string>
+    <string name="settings_flash_screen">Breathing UI flash when finished</string>
+    <string name="settings_sound_mode">Sound Mode</string>
+    <string name="settings_vibration_mode">Vibration Mode</string>
+    <string name="settings_ringtone">Ringtone Selection</string>
+    
+    <string name="sound_mode_continuous">Continuous Ringing</string>
+    <string name="sound_mode_single">Ring Once</string>
+    <string name="sound_mode_off">Off</string>
+    
+    <string name="vibration_mode_continuous">Continuous Vibration</string>
+    <string name="vibration_mode_single">Vibrate Once</string>
+    <string name="vibration_mode_off">Off</string>    
+    
+    <string name="ringtone_digital">Classic Digital Tick</string>
+    <string name="ringtone_chime">Crisp Wind Chime</string>
+    <string name="ringtone_soft">Soft Synth</string>
+    <string name="ringtone_zen_bowl">Zen Singing Bowl</string>
+    <string name="ringtone_nature_wood">Nature Xylophone</string>
+    <!-- 通知渠道 -->
+    <string name="notification_channel_name">TomatoClock Notifications</string>
+    <string name="notification_channel_desc">Shows timer status and alerts</string>
+    <string name="toast_permission_denied">Notification permission is required to run the timer in the background</string>
+    <string name="toast_foreground_service_failed">Failed to start background service, please interact within the app</string>
+</resources>

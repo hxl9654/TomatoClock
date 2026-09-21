@@ -49,3 +49,7 @@ google-services.json
 .kotlin/
 
 scratch/
+
+# Miscellaneous
+test_output.log
+git_log.patch
