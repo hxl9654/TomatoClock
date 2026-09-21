@@ -362,4 +362,91 @@ class TimerScreenVrtTest {
         
         composeTestRule.onRoot().captureRoboImage()
     }
+
+    // ── [P2-5修复] 补全缺失的状态快照覆盖 ───────────────────────────────
+
+    @Test
+    fun testTimerScreenShortBreakIdleSnapshot() {
+        // 验证 SHORT_BREAK + IDLE（「准备短休息」文字）
+        composeTestRule.setContent {
+            com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+                TimerScreenContent(
+                    timerMode = TimerMode.SHORT_BREAK,
+                    timerState = TimerState.IDLE,
+                    timeRemaining = 300L,
+                    totalTime = 300L,
+                    currentCycle = 1,
+                    totalCycles = 4,
+                    flashScreen = false,
+                    onNavigateToSettings = {},
+                    onStart = {},
+                    onPause = {},
+                    onStop = {},
+                    onNextPhase = {},
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
+                )
+            }
+        }
+
+        composeTestRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    fun testTimerScreenShortBreakFinishedSnapshot() {
+        // 验证 SHORT_BREAK + FINISHED（「休息结束！」文字 + Secondary 颜色）
+        composeTestRule.setContent {
+            com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+                TimerScreenContent(
+                    timerMode = TimerMode.SHORT_BREAK,
+                    timerState = TimerState.FINISHED,
+                    timeRemaining = 0L,
+                    totalTime = 300L,
+                    currentCycle = 2,
+                    totalCycles = 4,
+                    flashScreen = false,
+                    onNavigateToSettings = {},
+                    onStart = {},
+                    onPause = {},
+                    onStop = {},
+                    onNextPhase = {},
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
+                )
+            }
+        }
+
+        composeTestRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    fun testTimerScreenLongBreakIdleSnapshot() {
+        // 验证 LONG_BREAK + IDLE（「准备长休息」文字 + Tertiary 颜色）
+        composeTestRule.setContent {
+            com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme {
+                TimerScreenContent(
+                    timerMode = TimerMode.LONG_BREAK,
+                    timerState = TimerState.IDLE,
+                    timeRemaining = 900L,
+                    totalTime = 900L,
+                    currentCycle = 4,
+                    totalCycles = 4,
+                    flashScreen = false,
+                    onNavigateToSettings = {},
+                    onStart = {},
+                    onPause = {},
+                    onStop = {},
+                    onNextPhase = {},
+                    onSnooze = {},
+                    onAddFiveMinutes = {},
+                    onSkipPhase = {}
+                )
+            }
+        }
+
+        composeTestRule.onRoot().captureRoboImage()
+    }
 }
+

@@ -120,35 +120,37 @@ class TimerServiceTest {
         coVerify(exactly = 0) { mockAlarmPlayer.play(any(), any(), any()) }
     }
 
+    /**
+     * [P1-4修复] 直接调用 @VisibleForTesting internal 的 updateNotification 方法，
+     * 替换原先通过反射 invoke + InvocationTargetException 掩盖结果的脆弱测试。
+     *
+     * 原测试缺陷：catch(InvocationTargetException) { if "not mocked" skip } 逻辑导致
+     * SecurityException 是否被捕获根本未被验证，测试永远通过。
+     *
+     * 修复：updateNotification 已改为 @VisibleForTesting internal，可直接调用，
+     * 通过 verify(Log.e) 确认 SecurityException 被记录而非传播。
+     */
     @Test
-    fun `updateNotification does not crash when NotificationManager throws SecurityException`() = runTest(testDispatcher) {
+    fun `updateNotification catches SecurityException and logs error without rethrowing`() = runTest(testDispatcher) {
         io.mockk.mockkStatic(android.util.Log::class)
         every { android.util.Log.e(any(), any(), any()) } returns 0
 
         val spyService = io.mockk.spyk(timerService)
-        val mockNotificationManager = mockk<android.app.NotificationManager>()
+        val mockNotificationManager = mockk<android.app.NotificationManager>(relaxed = true)
         every { spyService.getSystemService(android.app.NotificationManager::class.java) } returns mockNotificationManager
         every { mockNotificationManager.notify(any(), any()) } throws SecurityException("Permission revoked")
 
-        // Set isForeground to true to bypass the early return
+        // 设置 isForeground = true，绕过 updateNotification 开头的 early return
         val isForegroundField = TimerService::class.java.getDeclaredField("isForeground")
         isForegroundField.isAccessible = true
         isForegroundField.set(spyService, true)
 
-        // Use reflection to call the private updateNotification method, or just let it be covered by the fact it won't crash
-        val method = TimerService::class.java.getDeclaredMethod("updateNotification", TimerState::class.java, Long::class.java, TimerMode::class.java, Boolean::class.java)
-        method.isAccessible = true
-        
-        try {
-            method.invoke(spyService, TimerState.RUNNING, 1000L, TimerMode.FOCUS, false)
-        } catch (e: java.lang.reflect.InvocationTargetException) {
-            // If it throws because of 'Method not mocked' (e.g. buildNotification), that's fine.
-            // What we care about is that SecurityException is caught.
-            if (e.cause?.message?.contains("not mocked") != true) {
-                throw e
-            }
-        }
-        
+        // 直接调用（不再依赖反射 invoke），不应抛出异常
+        spyService.updateNotification(TimerState.RUNNING, 1000L, TimerMode.FOCUS, false)
+
+        // 核心断言：SecurityException 被捕获后必须记录日志（而非重新抛出）
+        verify(atLeast = 1) { android.util.Log.e(any(), any(), any()) }
+
         io.mockk.unmockkStatic(android.util.Log::class)
     }
 

@@ -147,7 +147,8 @@ class TimerService : Service() {
         }
     }
 
-    private fun updateNotification(state: TimerState, time: Long, mode: TimerMode, wakeScreen: Boolean) {
+    @androidx.annotation.VisibleForTesting
+    internal fun updateNotification(state: TimerState, time: Long, mode: TimerMode, wakeScreen: Boolean) {
         if (!isForeground) return
         try {
             val notificationManager = getSystemService(NotificationManager::class.java)

@@ -11,14 +11,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import kotlin.time.Duration.Companion.milliseconds
@@ -541,7 +542,7 @@ class TimerRepositoryTest {
         assertEquals(false, repo.suppressAlarm.value)
         // [B-7修复] 将时间容差从宽泛的 110..125 缩紧至确定的 ±1 秒内
         // 增强对恢复逻辑计算偏差的敏感度。
-        org.junit.Assert.assertTrue(
+        assertTrue(
             "Expected time remaining to be exactly 120 or 119, but was ${repo.timeRemaining.value}",
             repo.timeRemaining.value in 119L..120L
         )
@@ -799,7 +800,7 @@ class TimerRepositoryTest {
         assertEquals(maxAllowed, repository.totalTimeInSeconds.value)
 
         // Cancel timer to prevent runTest from simulating 24 hours of ticks which causes OOM
-        repository.forceFinishTimer()
+        repository.pauseTimer() // 清理：停止后台倒计时协程，防止占用虚拟时间到运行结束
     }
 
     // ── [B-3修复] 补全缺失的边界场景测试 ──────────────────────
@@ -840,6 +841,7 @@ class TimerRepositoryTest {
 
         // 总时长不应有变化
         assertEquals(totalBefore, repository.totalTimeInSeconds.value)
+        // 清理：停止后台倒计时协程，防止超时占用虚拟时间
         repository.pauseTimer()
     }
 
@@ -856,6 +858,7 @@ class TimerRepositoryTest {
         testScheduler.runCurrent()
 
         assertEquals(totalBefore, repository.totalTimeInSeconds.value)
+        // 清理：停止后台倒计时协程，防止超时占用虚拟时间
         repository.pauseTimer()
     }
 
@@ -912,38 +915,94 @@ class TimerRepositoryTest {
         io.mockk.coVerify(atLeast = 1) { mockDataStore.saveTimerState(any()) }
     }
 
+    /**
+     * [P1-1修复] 死锁检测测试重写版本：使用 CompletableDeferred 精确追踪锁释放时机。
+     *
+     * 测试逻辑：
+     * 1. saveTimerState 内使用 Deferred 阻塞 IO，让 saveCurrentState 在 IO 期间替止不动
+     * 2. 通过 ioStarted.isCompleted 确认 stateMutex.withLock 已退出（锁已释放）
+     * 3. 在 IO 仍阻塞期间尝试获取 stateMutex 的 pauseTimer 应能立即完成
+     *
+     * 可证伪性验证：若将 saveTimerState 移到 withLock 内，
+     * ioStarted.complete() 将在锁放开前被调用，
+     * 而 pauseTimer 将因得不到锁而阻塞，使此断言变红。
+     */
     @Test
-    fun `saveCurrentState performs IO outside of stateMutex to prevent deadlock`() = runTest(testDispatcher) {
-        // Arrange: Make saveTimerState suspend for a long time
+    fun `saveCurrentState releases stateMutex before calling saveTimerState to prevent deadlock`() = runTest(testDispatcher) {
+        val ioStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val ioCanProceed = kotlinx.coroutines.CompletableDeferred<Unit>()
+
+        // Arrange: saveTimerState 内插入信号点，用于精确控制 IO 时序
         coEvery { mockDataStore.saveTimerState(any()) } coAnswers {
-            kotlinx.coroutines.delay(5000L.milliseconds)
+            ioStarted.complete(Unit)  // 通知：IO 开始（此时 stateMutex 应已释放）
+            ioCanProceed.await()       // 阻塞 IO，让 pauseTimer 有机会竞争 mutex
         }
-        testScheduler.advanceUntilIdle() // Ensure init is done
+        testScheduler.advanceUntilIdle() // 确保 repo 初始化完成
 
-        // Act: Start saveCurrentState in a separate coroutine
-        val saveJob = backgroundScope.launch {
-            repository.saveCurrentState()
-        }
+        // Act 1: 在 backgroundScope 异步启动 saveCurrentState
+        val saveJob = backgroundScope.launch { repository.saveCurrentState() }
+        // 运行至 stateMutex.withLock 块结束（IO 尚未开始）
+        testScheduler.runCurrent()
 
-        // Advance time just enough to enter the suspend function (delay in saveTimerState)
-        testScheduler.advanceTimeBy(100L) 
+        // Assert 1: ioStarted 已完成，证明 saveTimerState 已被调用，
+        // 即 stateMutex.withLock 块已退出、锁已释放。
+        assertTrue(
+            "saveTimerState should have been called, meaning stateMutex has been released",
+            ioStarted.isCompleted
+        )
 
-        // At this point, saveCurrentState is suspended inside saveTimerState.
-        // If saveCurrentState holds stateMutex during saveTimerState, the following call will hang/deadlock
-        // because pauseTimer() also needs stateMutex.
-        var pauseTimerCompleted = false
+        // Act 2: 此时 IO 仍在阻塞，但 mutex 应已释放。
+        // pauseTimer 需要 stateMutex，如果 IO 在锁内则会死锁。
+        var pauseCompleted = false
         val pauseJob = backgroundScope.launch {
             repository.pauseTimer()
-            pauseTimerCompleted = true
+            pauseCompleted = true
         }
+        testScheduler.runCurrent() // 尝试运行 pauseTimer
 
-        testScheduler.runCurrent() // Run pauseTimer up to the point it either completes or blocks
-
-        // Assert: pauseTimer should complete immediately, meaning it didn't wait for saveCurrentState's lock
-        assertEquals(true, pauseTimerCompleted)
+        // Assert 2: pauseTimer 应能立即获得 mutex 并完成。
+        // 如果 IO 在锁内执行， pauseTimer 会在此处阻塞（pauseCompleted == false）
+        assertTrue(
+            "pauseTimer should complete while saveTimerState IO is still blocked (no deadlock)",
+            pauseCompleted
+        )
 
         // Cleanup
+        ioCanProceed.complete(Unit)
         saveJob.cancel()
         pauseJob.cancel()
+    }
+
+    // ―― [P3-2修复] forceFinishTimer(isSkipped=true) 的 suppressAlarm 断言 ―――――――――――
+
+    @Test
+    fun `forceFinishTimer with isSkipped=true sets suppressAlarm to true`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+        assertEquals(TimerState.RUNNING, repository.timerState.value)
+
+        // 手动跳过（isSkipped=true）
+        repository.forceFinishTimer(isSkipped = true)
+        testScheduler.advanceUntilIdle()
+
+        // 验证：手动跳过时应静音，不播放闹钟
+        assertEquals(TimerState.FINISHED, repository.timerState.value)
+        assertEquals(true, repository.suppressAlarm.value)
+    }
+
+    @Test
+    fun `forceFinishTimer with isSkipped=false allows alarm to ring`() = runTest(testDispatcher) {
+        testScheduler.advanceUntilIdle()
+        repository.startTimer()
+        testScheduler.runCurrent()
+
+        // 正常完成（默认 isSkipped=false）
+        repository.forceFinishTimer(isSkipped = false)
+        testScheduler.advanceUntilIdle()
+
+        // 验证：正常完成时应计允许响铃
+        assertEquals(TimerState.FINISHED, repository.timerState.value)
+        assertEquals(false, repository.suppressAlarm.value)
     }
 }

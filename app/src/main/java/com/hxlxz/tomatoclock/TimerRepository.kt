@@ -429,11 +429,12 @@ class TimerRepository @Inject constructor(
      */
     private fun persistStateAsync() {
         scope.launch {
-            // [A-3修复] 捕获 DataStore 可能抛出的 IOException（磁盘满/加密错误等），
-            // SupervisorJob 防止了崩溃，但同时也静默吐掉了异常，违反 Rule data_layer.md #3。
+            // [A-3修复] 捕获 DataStore 可能抛出的 IOException（磁盘满/加密错误等）。
+            // [P2-2修复] 使用 IOException 而非 Exception 基类，确保 CancellationException
+            // 能正常传播，不破坏协程结构化并发的取消机制。
             try {
                 saveCurrentState()
-            } catch (e: Exception) {
+            } catch (e: java.io.IOException) {
                 Log.e("TimerRepository", "Failed to persist timer state to DataStore", e)
             }
         }
@@ -447,9 +448,11 @@ class TimerRepository @Inject constructor(
      */
     private fun clearStateAsync() {
         scope.launch {
+            // [P2-3修复] 使用 IOException 而非 Exception 基类，确保 CancellationException
+            // 能正常传播，不破坏协程结构化并发的取消机制。
             try {
                 settingsDataStore.clearTimerState()
-            } catch (e: Exception) {
+            } catch (e: java.io.IOException) {
                 Log.e("TimerRepository", "Failed to clear timer state from DataStore", e)
             }
         }

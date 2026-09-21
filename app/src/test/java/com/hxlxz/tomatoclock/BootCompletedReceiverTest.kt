@@ -44,7 +44,14 @@ class BootCompletedReceiverTest {
 
     /**
      * 验证 ACTION_BOOT_COMPLETED 到达时触发初始化逻辑（通过 spyk 代理实现）。
-     * 使用 io.mockk.spyk 包装真实实例以观察 handleBootCompleted() 的调用次数。
+     *
+     * [P2-6] 覆盖局限性说明：
+     * BootCompletedReceiver 标注了 @AndroidEntryPoint，在真机环境 Hilt 会在字节码层拦截
+     * onReceive 调用，执行依赖注入逻辑。
+     * 此处的 Robolectric 测试中使用了真实对象实例副本（spyk），并绕过了 Hilt，
+     * 因此测试调用的是未被修改的原始 Kotlin 字节码路径，仅验证纯业务分发逻辑。
+     *
+     * 核心初始化逻辑（ensureInitialized）实际由 handleBootCompleted 的独立测试覆盖。
      */
     @Test
     fun `onReceive with ACTION_BOOT_COMPLETED calls handleBootCompleted`() {

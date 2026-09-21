@@ -7,6 +7,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -48,20 +49,29 @@ class TimerAlarmReceiverTest {
 
     /**
      * 验证 onReceive 不会崩溃（smoke test）。
-     * 因 @AndroidEntryPoint final class 限制，此处仅验证不抛出异常。
+     *
+     * [P1-2修复] 原测试使用 catch (_: UninitializedPropertyAccessException) 完全静默，
+     * 导致任何异常都被吞没，测试永远通过（哑炮）。
+     *
+     * 修复：断言异常确实来自 applicationScope 未注入，而非其他未预期字段的初始化失败。
+     * 这样若生产代码引入了新的未初始化字段，测试会正确变红。
      */
     @Test
-    fun `onReceive does not crash`() {
+    fun `onReceive does not crash when applicationScope is uninitialized`() {
         val mockRepository = mockk<TimerRepository>(relaxed = true)
         val receiver = TimerAlarmReceiver().also { it.repository = mockRepository }
 
         // 仅验证 onReceive 调用本身不抛出同步异常
         // goAsync() 触发的协程在 Robolectric 中需要 applicationScope 注入才能跑完，
-        // 此处仅验证入口不崩溃即满足最低防御要求。
+        // 此处验证异常确实来自 applicationScope 未注入（而非其他未预期的初始化失败）
         try {
             receiver.onReceive(context, Intent())
-        } catch (_: UninitializedPropertyAccessException) {
-            // applicationScope 未被 Hilt 注入，属预期内异常，不影响 handleAlarm 的测试覆盖
+        } catch (e: UninitializedPropertyAccessException) {
+            // 断言：异常应来自 applicationScope 字段，而非其他未预期的字段
+            assertTrue(
+                "UninitializedPropertyAccessException should be from 'applicationScope', but was: ${e.message}",
+                e.message?.contains("applicationScope") == true
+            )
         }
     }
 }
