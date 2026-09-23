@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -313,17 +314,36 @@ fun TimerScreenContent(
                     TimerState.FINISHED -> {
                         Button(
                             onClick = onNextPhase,
-                            modifier = Modifier.height(80.dp).padding(horizontal = 16.dp),
+                            modifier = Modifier.height(80.dp).weight(2f),
+                            contentPadding = PaddingValues(horizontal = 2.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = colorPrimary)
                         ) {
-                            Text(stringResource(R.string.action_next))
+                            Text(
+                                stringResource(R.string.action_resume),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
                         }
                         
                         OutlinedButton(
                             onClick = onSnooze,
-                            modifier = Modifier.height(80.dp).padding(horizontal = 16.dp)
+                            modifier = Modifier.height(80.dp).weight(1f),
+                            contentPadding = PaddingValues(horizontal = 2.dp)
                         ) {
-                            Text(stringResource(R.string.action_snooze))
+                            Text(
+                                stringResource(R.string.action_snooze_short),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = onStop,
+                            modifier = Modifier.height(80.dp).weight(1f),
+                            contentPadding = PaddingValues(horizontal = 2.dp)
+                        ) {
+                            Text(
+                                stringResource(R.string.action_stop),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
                         }
                     }
                 }

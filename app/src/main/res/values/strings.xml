@@ -28,7 +28,8 @@
     <string name="action_snooze">推迟提醒</string>
     
     <!-- 通知栏专用短文字（空间有限） -->
-    <string name="action_next_short">下个阶段</string>
+    <string name="action_next_short">下一步</string>
+    <string name="action_snooze_short">延时</string>
     <string name="action_add_time">加5分钟</string>
     <string name="action_skip_phase">跳过当前周期</string>
     
@@ -73,5 +74,9 @@
     <string name="notification_channel_desc">显示计时状态及结束提醒</string>
     <string name="toast_permission_denied">需要通知权限以在后台运行倒计时</string>
     <string name="toast_foreground_service_failed">无法在后台启动专注服务，请在应用内操作</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_license">开源许可证</string>
+    <string name="settings_github">GitHub 项目主页</string>
+    <string name="license_title">开源许可证</string>
+    <string name="license_content">本项目基于 GNU General Public License v3.0 (GPLv3) 开源。\n\n本项目使用如下开源库：\n\n- Kotlin (Apache 2.0)\n- AndroidX (Apache 2.0)\n- Jetpack Compose (Apache 2.0)\n- Hilt (Apache 2.0)\n- Coroutines (Apache 2.0)</string>
 </resources>
-

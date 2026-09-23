@@ -35,8 +35,10 @@
 *   **Cycles**: Automatically track your pomodoro cycles and trigger a long break after a set number of focuses.
 *   **Real-time Settings Sync**: Home screen instantly reflects changes made in Settings while the timer is idle.
 *   **Postpone Reminder**: Postpone a completed session to continue for a few more minutes.
+*   **Stop Control**: A stop button is available on the phase completion page to immediately reset the timer.
 *   **Data Persistence & Recovery**: Features a **Write-Through** persistence strategy with an additional 60-second heartbeat. The app accurately recovers timer states even if the process is killed by the system.
 *   **Pure Chinese UI**: The user interface is completely in Simplified Chinese (Bilingual support coming soon).
+*   **Open Source License**: View the GPLv3 license and open source acknowledgments directly in the settings.
 
 ### 🚀 Getting Started
 
@@ -112,8 +114,10 @@ This project is licensed under the **GNU General Public License v3.0 (GPLv3)**.
 *   **智能循环**: 自动记录您的番茄钟循环次数，并在设定的专注次数后自动触发长休息。
 *   **设置实时同步**: 在计时器空闲状态下，设置页面的修改会即时反映在主界面上。
 *   **推迟提醒**: 当阶段结束时，您可以推迟几分钟再进入下一阶段。
+*   **快速停止**: 阶段完成页面提供“停止”按钮，可直接重置计时器进度。
 *   **极致数据持久化**: 采用直写式持久化策略，每次状态变更立即落盘，并在倒计时期间以 60 秒心跳兜底，在异常杀后台后仍能准确恢复计时状态。
 *   **纯中文界面**: 用户界面为纯正的简体中文设计。
+*   **开源许可证**: 在设置页面中提供专门的开源许可证入口，展示应用及其依赖库的协议信息。
 
 ### 🚀 快速开始
 

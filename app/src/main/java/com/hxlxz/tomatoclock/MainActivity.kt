@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.hxlxz.tomatoclock.ui.SettingsScreen
 import com.hxlxz.tomatoclock.ui.TimerScreen
+import com.hxlxz.tomatoclock.ui.LicenseScreen
 import com.hxlxz.tomatoclock.ui.theme.TomatoClockTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -96,6 +97,12 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("settings") {
                             SettingsScreen(
+                                onNavigateBack = { navController.popBackStack() },
+                                onNavigateToLicense = { navController.navigate("license") }
+                            )
+                        }
+                        composable("license") {
+                            LicenseScreen(
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }

@@ -86,12 +86,12 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("停止").assertIsDisplayed()
 
         // 3. Let the timer run to completion virtually
-        waitUntilTextExists("开始下个阶段")
+        waitUntilTextExists("延时")
         composeTestRule.waitForIdle()
 
-        // 4. Verify we are now in FINISHED state where we can click "开始下个阶段"
-        composeTestRule.onNodeWithText("开始下个阶段").assertIsDisplayed()
-        composeTestRule.onNodeWithText("开始下个阶段").performClick()
+        // 4. Verify we are now in FINISHED state where we can click "继续"
+        composeTestRule.onNodeWithText("继续").assertIsDisplayed()
+        composeTestRule.onNodeWithText("继续").performClick()
         composeTestRule.waitForIdle()
 
         // SHORT_BREAK RUNNING 状态显示"短休息"
@@ -122,6 +122,9 @@ class TomatoClockE2ETest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("时长设置（分钟）").assertIsDisplayed()
 
+        // Scroll to and verify GitHub link
+        composeTestRule.onNodeWithText("GitHub 项目主页").performScrollTo().assertIsDisplayed()
+
         // Find the text field containing "3" (our focus time) and increment it
         composeTestRule.onNodeWithContentDescription("返回").performClick()
         composeTestRule.waitForIdle()
@@ -143,31 +146,42 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("开始").performClick()
 
         // Wait virtually for focus timer (3s) to finish
-        waitUntilTextExists("开始下个阶段")
+        waitUntilTextExists("延时")
         composeTestRule.waitForIdle()
 
-        // We should see "开始下个阶段" and "推迟提醒"
-        composeTestRule.onNodeWithText("开始下个阶段").assertIsDisplayed()
-        composeTestRule.onNodeWithText("推迟提醒").assertIsDisplayed()
+        // We should see "继续" and "延时"
+        composeTestRule.onNodeWithText("继续").assertIsDisplayed()
+        composeTestRule.onNodeWithText("延时").assertIsDisplayed()
 
         // Click snooze
-        composeTestRule.onNodeWithText("推迟提醒").performClick()
+        composeTestRule.onNodeWithText("延时").performClick()
         composeTestRule.waitForIdle()
 
         // Wait 3 seconds for snooze timer (2s) to finish
-        waitUntilTextExists("开始下个阶段")
+        waitUntilTextExists("延时")
         composeTestRule.waitForIdle()
 
         // It should be finished again
-        composeTestRule.onNodeWithText("开始下个阶段").assertIsDisplayed()
+        composeTestRule.onNodeWithText("继续").assertIsDisplayed()
 
         // Click next
-        composeTestRule.onNodeWithText("开始下个阶段").performClick()
+        composeTestRule.onNodeWithText("继续").performClick()
         composeTestRule.waitForIdle()
 
         // Should transition to SHORT_BREAK and start immediately
         composeTestRule.onNodeWithText("短休息").assertIsDisplayed()
         composeTestRule.onNodeWithText("暂停").assertIsDisplayed()
+        
+        // Wait virtually for short break timer (2s) to finish
+        waitUntilTextExists("延时")
+        composeTestRule.waitForIdle()
+        
+        // Test clicking Stop in FINISHED state
+        composeTestRule.onNodeWithText("停止").performClick()
+        composeTestRule.waitForIdle()
+        
+        // Verify it resets to FOCUS IDLE mode
+        composeTestRule.onNodeWithText("准备专注").assertIsDisplayed()
     }
 
     @Test
@@ -188,30 +202,30 @@ class TomatoClockE2ETest {
         composeTestRule.onNodeWithText("开始").performClick()
 
         // Cycle 1: Focus (initialized as 3s from @Before)
-        waitUntilTextExists("开始下个阶段")
+        waitUntilTextExists("延时")
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("开始下个阶段").performClick()
+        composeTestRule.onNodeWithText("继续").performClick()
         composeTestRule.waitForIdle()
 
         // Should transition to SHORT_BREAK (2s from @Before)
         waitUntilTextExists("短休息")
 
         // Wait for Short break to finish (2s)
-        waitUntilTextExists("开始下个阶段")
+        waitUntilTextExists("延时")
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("开始下个阶段").performClick()
+        composeTestRule.onNodeWithText("继续").performClick()
         composeTestRule.waitForIdle()
 
         // Cycle 2: Focus RUNNING (reads 3s again)
         waitUntilTextExists("专注中")
 
         // Wait for Focus to finish (3s)
-        waitUntilTextExists("开始下个阶段")
+        waitUntilTextExists("延时")
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("开始下个阶段").performClick()
+        composeTestRule.onNodeWithText("继续").performClick()
         composeTestRule.waitForIdle()
 
         // Because cycles = 2, we should now be in LONG_BREAK
@@ -313,7 +327,7 @@ class TomatoClockE2ETest {
         composeTestRule.waitForIdle()
 
         // 验证直接进入 FINISHED 状态
-        composeTestRule.onNodeWithText("开始下个阶段").assertIsDisplayed()
+        composeTestRule.onNodeWithText("继续").assertIsDisplayed()
     }
 
     @Test

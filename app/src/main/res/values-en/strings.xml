@@ -28,7 +28,8 @@
     <string name="action_snooze">Postpone</string>
     
     <!-- 通知栏专用短文字（空间有限） -->
-    <string name="action_next_short">Next Phase</string>
+    <string name="action_next_short">Next</string>
+    <string name="action_snooze_short">Snooze</string>
     <string name="action_add_time">+5 Min</string>
     <string name="action_skip_phase">Skip Phase</string>
     
@@ -73,4 +74,9 @@
     <string name="notification_channel_desc">Shows timer status and alerts</string>
     <string name="toast_permission_denied">Notification permission is required to run the timer in the background</string>
     <string name="toast_foreground_service_failed">Failed to start background service, please interact within the app</string>
+    <string name="settings_about">About</string>
+    <string name="settings_license">Open Source License</string>
+    <string name="settings_github">GitHub Repository</string>
+    <string name="license_title">Open Source License</string>
+    <string name="license_content">This project is open-sourced under the GNU General Public License v3.0 (GPLv3).\n\nThis project uses the following open-source libraries:\n\n- Kotlin (Apache 2.0)\n- AndroidX (Apache 2.0)\n- Jetpack Compose (Apache 2.0)\n- Hilt (Apache 2.0)\n- Coroutines (Apache 2.0)</string>
 </resources>

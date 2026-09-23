@@ -35,7 +35,8 @@ fun SettingsScreen(
                 "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
             }, null
     ),
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToLicense: () -> Unit
 ) {
     val focusTime by viewModel.focusTimeFlow.collectAsStateWithLifecycle(initialValue = 25)
     val shortBreakTime by viewModel.shortBreakTimeFlow.collectAsStateWithLifecycle(initialValue = 5)
@@ -61,6 +62,7 @@ fun SettingsScreen(
         vibrationMode = vibrationMode,
         ringtone = ringtone,
         onNavigateBack = onNavigateBack,
+        onNavigateToLicense = onNavigateToLicense,
         onFocusTimeChange = { viewModel.saveFocusTime(it) },
         onShortBreakTimeChange = { viewModel.saveShortBreakTime(it) },
         onLongBreakTimeChange = { viewModel.saveLongBreakTime(it) },
@@ -89,6 +91,7 @@ fun SettingsScreenContent(
     vibrationMode: Int,
     ringtone: Int,
     onNavigateBack: () -> Unit,
+    onNavigateToLicense: () -> Unit,
     onFocusTimeChange: (Int) -> Unit,
     onShortBreakTimeChange: (Int) -> Unit,
     onLongBreakTimeChange: (Int) -> Unit,
@@ -225,6 +228,41 @@ fun SettingsScreenContent(
                     onRingtonePreview(it)
                 }
             )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            Text(
+                text = stringResource(R.string.settings_about),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            TextButton(
+                onClick = onNavigateToLicense,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_license),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+            TextButton(
+                onClick = { uriHandler.openUri("https://github.com/hxl9654/TomatoClock") },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_github),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }

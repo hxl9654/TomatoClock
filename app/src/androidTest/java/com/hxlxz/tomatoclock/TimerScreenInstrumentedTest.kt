@@ -87,11 +87,11 @@ class TimerScreenInstrumentedTest {
             TimerScreen(onNavigateToSettings = {}, viewModel = viewModel)
         }
 
-        composeTestRule.onNodeWithText("开始下个阶段").performClick()
+        composeTestRule.onNodeWithText("继续").performClick()
         composeTestRule.waitForIdle()
         verify { viewModel.nextPhase() }
 
-        composeTestRule.onNodeWithText("推迟提醒").performClick()
+        composeTestRule.onNodeWithText("延时").performClick()
         composeTestRule.waitForIdle()
         verify { viewModel.snooze() }
     }
